@@ -291,7 +291,7 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
       <section className="campaigns-preview">
         <div className="campaigns-section-title"><div><span>04 / CONFERÊNCIA</span><h2>Prévia do destinatário</h2></div><Eye size={19}/></div>
         {previewLead ? <><label className="campaigns-preview-select">Visualizar para <select value={previewLead.id} onChange={e=>setPreviewId(e.target.value)}>{usable.map(l=><option key={l.id} value={l.id}>{l.company||l.name}</option>)}</select></label>
-          <div className="campaigns-mail-preview"><div><span>De</span><strong>CRM Plus Store &lt;contato@crmplus.store&gt;</strong></div><div><span>Para</span><strong>{previewLead.email}</strong></div><div><span>Assunto</span><strong>{mapText(form.subject,previewLead,products)}</strong></div><p>{mapText(form.body,previewLead,products)}</p><small>Para deixar de receber nossas comunicações, responda SAIR a este e-mail.</small></div>
+          <div className="campaigns-mail-preview"><div><span>De</span><strong>Individual: conta escolhida no seu e-mail · Resend: contato@crmplus.store</strong></div><div><span>Para</span><strong>{previewLead.email}</strong></div><div><span>Assunto</span><strong>{mapText(form.subject,previewLead,products)}</strong></div><p>{mapText(form.body,previewLead,products)}</p><small>Para deixar de receber nossas comunicações, responda SAIR a este e-mail.</small></div>
         </>:<p className="campaigns-empty">Cadastre um lead com e-mail para visualizar o modelo personalizado.</p>}
       </section>
       <section className="campaigns-dispatch">
