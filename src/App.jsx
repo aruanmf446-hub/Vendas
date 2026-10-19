@@ -190,18 +190,26 @@ export default function App() {
     refresh();
   }, [user?.id]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4200); return () => clearTimeout(timer); }, [toast]);
+  // Atualiza as respostas recebidas sem atualizar toda a página ou alterar o estado do WhatsApp.
+  useEffect(() => {
+    if (!permitted(user)) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refresh(true);
+    }, 45000);
+    return () => window.clearInterval(timer);
+  }, [user?.id]);
 
-  async function refresh() {
+  async function refresh(quiet = false) {
     if (!supabase) return;
-    setLoading(true);
+    if (!quiet) setLoading(true);
     const [pr, ld, ac] = await Promise.all([
       supabase.from('crm_products').select('*').order('name'),
       supabase.from('crm_leads').select('*').order('updated_at', { ascending: false }),
       supabase.from('crm_activities').select('*').order('created_at', { ascending: false })
     ]);
-    if (pr.error || ld.error || ac.error) setToast('Erro ao carregar: ' + (pr.error || ld.error || ac.error).message);
+    if (pr.error || ld.error || ac.error) { if (!quiet) setToast('Erro ao carregar: ' + (pr.error || ld.error || ac.error).message); }
     else { setProducts(pr.data || []); setLeads(ld.data || []); setActivities(ac.data || []); }
-    setLoading(false);
+    if (!quiet) setLoading(false);
   }
   const productById = id => products.find(p=>p.id===id);
   const selected = leads.find(l=>l.id===selectedId);
@@ -355,7 +363,7 @@ export default function App() {
     {toast&&<div className="toast" role="status"><Activity size={17}/>{toast}<button onClick={()=>setToast('')} aria-label="Dispensar aviso"><X size={15}/></button></div>}
     {selected&&<div className="drawer-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedId(null)}}><aside className="lead-drawer"><div className="drawer-head"><span className="eyebrow muted">DETALHES DA OPORTUNIDADE</span><button className="icon-btn close-btn" aria-label="Fechar detalhes" onClick={()=>setSelectedId(null)}><X size={20}/></button></div>
       <div className="drawer-title"><span className="client-avatar big">{initials(selected.name)}</span><div><h2>{selected.name}</h2><p>{selected.company||'Contato comercial'}</p></div></div>
-      <div className="drawer-stage"><StagePill stage={selected.stage}/><span>{brl(selected.expected_value)}</span></div>{selected.outreach_status && selected.outreach_status !== 'nao_iniciado' && <div className="drawer-outreach-status"><MessageCircle size={13}/> Prospecção: {{video_enviado:'Vídeo enviado',mensagem_enviada:'Mensagem enviada',aguardando_resposta:'Aguardando resposta',respondeu:'Cliente respondeu'}[selected.outreach_status] || 'Em andamento'}</div>}
+      <div className="drawer-stage"><StagePill stage={selected.stage}/><span>{brl(selected.expected_value)}</span></div>{selected.last_whatsapp_reply_at && <div className="drawer-outreach-status"><MessageCircle size={13}/> Última resposta recebida: {longDate(selected.last_whatsapp_reply_at)}</div>}{selected.outreach_status && selected.outreach_status !== 'nao_iniciado' && <div className="drawer-outreach-status"><MessageCircle size={13}/> Prospecção: {{video_enviado:'Vídeo enviado',mensagem_enviada:'Mensagem enviada',aguardando_resposta:'Aguardando resposta',respondeu:'Cliente respondeu'}[selected.outreach_status] || 'Em andamento'}</div>}
       <div className="drawer-actions"><button className="btn btn-outline" onClick={()=>openLeadEditor(selected)}><Pencil size={16}/> Editar lead</button><button type="button" className="btn btn-whatsapp" onClick={()=>setOutreachId(selected.id)}><MessageCircle size={17}/> Abordagem Comercial <ArrowRight size={14}/></button></div>
       <div className="drawer-scroll"><div className="detail-section"><div className="detail-caption">INFORMAÇÕES DO LEAD</div><div className="detail-grid"><div><small>Produto de interesse</small><strong>{productById(selected.product_id)?.name||'Não definido'}</strong></div><div><small>Origem</small><strong>{selected.source}</strong></div><div><small>Próximo retorno</small><strong className={nextIsLate(selected)?'attention':''}>{selected.next_follow_up?shortDate(selected.next_follow_up):'Não agendado'}</strong></div><div><small>Prioridade</small><strong className="capitalize">{selected.priority}</strong></div><div><small>Telefone</small><strong>{selected.phone||'Não informado'}</strong></div><div><small>Email</small><strong className="break-text">{selected.email||'Não informado'}</strong></div></div>{selected.notes&&<div className="lead-notes"><FileText size={15}/><p>{selected.notes}</p></div>}</div>
       <div className="detail-section"><div className="detail-caption">ATUALIZAR ETAPA</div><div className="stage-selector"><select value={selected.stage} disabled={saving} onChange={e=>moveStage(selected,e.target.value)} aria-label="Alterar etapa do lead">{STAGES.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select><ChevronDown size={17}/></div></div>
