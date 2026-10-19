@@ -35,6 +35,8 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
   const [permissionId, setPermissionId] = useState(null);
   const [evidence, setEvidence] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  const [manualPreparedLeadId, setManualPreparedLeadId] = useState(null);
+  const [manualSaving, setManualSaving] = useState(false);
 
   const reload = async () => {
     const [c,d] = await Promise.all([
@@ -134,12 +136,39 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
     try {await navigator.clipboard.writeText(value);setNotice('Mensagem personalizada copiada. Nenhum e-mail foi disparado.');}
     catch{setNotice('Não foi possível copiar pelo navegador.');}
   };
-  const openMailApp = () => {
-    if (!previewLead?.email || !emailValid(previewLead.email)) {setNotice('Escolha um lead com e-mail válido.');return;}
-    const subject=mapText(form.subject,previewLead,products);
-    const body=mapText(form.body,previewLead,products);
-    window.location.href='mailto:'+encodeURIComponent(previewLead.email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-    setNotice('O aplicativo de e-mail foi solicitado. Revise e confirme o envio por lá; o CRM não registra envio automaticamente.');
+  // O primeiro contato é preparado no aplicativo de e-mail do operador.
+  // Nenhuma mensagem é enviada pelo Resend neste fluxo; não requer opt-in de marketing.
+  const openMailApp = (lead = previewLead) => {
+    if (!lead?.email || !emailValid(lead.email)) {setNotice('Escolha um lead com e-mail válido.');return;}
+    if (lead.email_opt_out_at) {setNotice('Este contato solicitou não receber comunicações.');return;}
+    if (form.subject.trim().length < 2 || form.body.trim().length < 10) {
+      setNotice('Preencha o assunto e a mensagem antes de preparar o e-mail.');
+      return;
+    }
+    const subject=mapText(form.subject,lead,products);
+    const body=mapText(form.body,lead,products);
+    setPreviewId(lead.id);
+    setManualPreparedLeadId(lead.id);
+    window.location.href='mailto:'+encodeURIComponent(lead.email.trim())+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    setNotice('Rascunho aberto no aplicativo de e-mail. Confira e envie por lá; o CRM não enviou a mensagem.');
+  };
+  const confirmManualSent = async () => {
+    const lead=leads.find(l=>l.id===manualPreparedLeadId);
+    if (!lead || manualSaving) return;
+    if (!window.confirm('Confirma que você enviou o e-mail para '+lead.email+' no aplicativo de e-mail? Abrir o rascunho não significa enviar.')) return;
+    setManualSaving(true);
+    try {
+      const subject=mapText(form.subject,lead,products);
+      const {error}=await supabase.from('crm_activities').insert({
+        owner_id:user.id,lead_id:lead.id,kind:'email',
+        content:('Envio individual confirmado manualmente pelo operador para '+lead.email+'. Assunto: '+subject+'. Não verificado automaticamente pelo CRM.').slice(0,2900)
+      });
+      if(error) throw error;
+      setManualPreparedLeadId(null);
+      await onRefresh();
+      setNotice('Confirmação manual registrada no histórico de '+(lead.company||lead.name)+'.');
+    }catch(error){setNotice('Não foi possível registrar o histórico: '+error.message);}
+    finally{setManualSaving(false);}
   };
   const send = async () => {
     if (sending || pending) return;
@@ -178,13 +207,34 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
       <div><span className="eyebrow muted">CRM PLUS / RELACIONAMENTO</span><h1>Campanhas de <em>e-mail.</em></h1><p>Personalize cada mensagem, selecione os contatos e acompanhe a entrega no CRM.</p></div>
       <button className="btn btn-primary" type="button" onClick={create}><Plus size={17}/> Nova campanha</button>
     </section>
-    <div className="campaigns-banner"><ShieldCheck size={20}/><div><strong>Envios responsáveis.</strong><span>Leads pesquisados podem receber rascunhos personalizados, mas o disparo pelo Resend só é liberado para quem autorizou campanhas. Sem autorização registrada, nenhum envio automático.</span></div></div>
+    <div className="campaigns-banner"><ShieldCheck size={20}/><div><strong>Dois caminhos de envio.</strong><span>Primeiro contato: prepare um e-mail individual para qualquer lead com e-mail válido, sem cadastrar autorização de campanha. Envio automático pelo Resend: exclusivo para contatos autorizados.</span></div></div>
     <div className="campaigns-metrics">
       <div><Mail size={18}/><strong>{all.length}</strong><span>campanhas salvas</span></div>
       <div><UsersRound size={18}/><strong>{usable.length}</strong><span>leads com e-mail</span></div>
       <div><ShieldCheck size={18}/><strong>{usable.filter(eligible).length}</strong><span>habilitados para campanhas</span></div>
       <div><CheckCircle2 size={18}/><strong>{deliveries.filter(d=>d.status==='sent').length}</strong><span>aceitos pelo Resend</span></div>
     </div>
+    <section className="campaigns-first-contact" aria-label="Primeiro contato individual">
+      <div className="campaigns-first-copy">
+        <span className="campaigns-first-eyebrow">PRIMEIRO CONTATO / INDIVIDUAL</span>
+        <h2>Comece a conversa, uma clínica por vez.</h2>
+        <p>Sem exigir autorização cadastrada para preparar o primeiro e-mail. Escolha a clínica, personalize o texto e confirme o envio no aplicativo de e-mail. Nenhuma mensagem é enviada automaticamente pelo CRM neste modo.</p>
+      </div>
+      <div className="campaigns-first-actions">
+        <label>Destinatário
+          <select value={previewLead?.id||''} onChange={e=>{setPreviewId(e.target.value);setManualPreparedLeadId(null);}}>
+            {usable.filter(l=>!l.email_opt_out_at).map(l=><option key={l.id} value={l.id}>{l.company||l.name} — {l.email}</option>)}
+          </select>
+        </label>
+        <button type="button" className="campaigns-manual-send" disabled={!previewLead||!!previewLead.email_opt_out_at||sending} onClick={()=>openMailApp()}>
+          <Mail size={18}/> Enviar individualmente <ArrowRight size={17}/>
+        </button>
+        <button type="button" className="campaigns-manual-confirm" disabled={!manualPreparedLeadId||manualSaving} onClick={confirmManualSent}>
+          <CheckCircle2 size={16}/> {manualSaving?'Registrando...':'Já enviei: registrar no CRM'}
+        </button>
+        <small>Ao abrir o rascunho, o envio ainda depende da sua confirmação no aplicativo de e-mail.</small>
+      </div>
+    </section>
     <div className="campaigns-grid">
       <aside className="campaigns-history">
         <div className="campaigns-section-title"><div><span>01 / BIBLIOTECA</span><h2>Suas campanhas</h2></div><button type="button" className="campaigns-icon" onClick={create} aria-label="Nova campanha"><FilePlus2 size={18}/></button></div>
@@ -203,7 +253,7 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
         <div className="campaigns-variables"><span>Variáveis automáticas</span>{['{nome}','{clinica}','{empresa}','{produto}','{origem}'].map(v=><button type="button" key={v} onClick={()=>update('body',form.body+v)}>{v}</button>)}</div>
         <div className="campaigns-actions">
           <button className="btn btn-outline" type="button" onClick={copy}><Clipboard size={16}/> Copiar prévia</button>
-          <button className="btn btn-outline" type="button" onClick={openMailApp}><Mail size={16}/> Abrir no e-mail</button>
+          <button className="btn btn-outline" type="button" onClick={()=>openMailApp()} disabled={!previewLead||!!previewLead.email_opt_out_at}><Mail size={16}/> Preparar e-mail individual</button>
           <button className="btn btn-primary" type="button" onClick={save} disabled={pending||sending}><Save size={16}/>{pending?'Salvando...':'Salvar campanha'}</button>
         </div>
       </section>
@@ -212,7 +262,8 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
       <div className="campaigns-section-title"><div><span>03 / DESTINATÁRIOS</span><h2>Selecionar e revisar leads</h2></div><span className="campaigns-count">{targets.length} selecionado(s)</span></div>
       <div className="campaigns-audience-tools">
         <label><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar clínica ou e-mail"/></label>
-        <button type="button" onClick={()=>setTargets(usable.filter(eligible).map(l=>l.id))}><ShieldCheck size={16}/> Selecionar autorizados</button>
+        <button type="button" onClick={()=>setTargets(usable.filter(l=>!l.email_opt_out_at).map(l=>l.id))}><UsersRound size={16}/> Selecionar para revisar</button>
+        <button type="button" onClick={()=>setTargets(usable.filter(eligible).map(l=>l.id))}><ShieldCheck size={16}/> Autorizados para Resend</button>
         <button type="button" onClick={()=>setTargets([])}><X size={15}/> Limpar seleção</button>
       </div>
       <div className="campaigns-lead-list">{shown.length ? shown.map(lead=>{
@@ -223,6 +274,7 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
           <span className={'campaigns-permission '+(allowed?'yes':lead.email_opt_out_at?'off':'no')}>{allowed?'Autorizado':lead.email_opt_out_at?'Descadastrado':'Sem autorização'}</span>
           <div className="campaigns-lead-buttons">
             <button type="button" onClick={()=>setPreviewId(lead.id)} title="Prévia personalizada"><Eye size={16}/></button>
+            <button type="button" onClick={()=>openMailApp(lead)} title="Preparar primeiro e-mail individual" aria-label={'Preparar primeiro e-mail para '+lead.name} disabled={!!lead.email_opt_out_at}><Mail size={16}/></button>
             {allowed?<button type="button" onClick={()=>revoke(lead)} title="Revogar permissão" disabled={pending}><PauseCircle size={16}/></button>:
               !lead.email_opt_out_at&&<button type="button" onClick={()=>{setPermissionId(lead.id);setConfirmed(false);setEvidence('');}} title="Registrar autorização real"><ShieldCheck size={16}/></button>}
           </div>
@@ -243,7 +295,7 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
         </>:<p className="campaigns-empty">Cadastre um lead com e-mail para visualizar o modelo personalizado.</p>}
       </section>
       <section className="campaigns-dispatch">
-        <div className="campaigns-section-title"><div><span>05 / DISPARO</span><h2>Enviar campanha</h2></div><Send size={19}/></div>
+        <div className="campaigns-section-title"><div><span>05 / CAMPANHA AUTOMÁTICA</span><h2>Enviar pelo Resend</h2></div><Send size={19}/></div>
         <div className="campaigns-dispatch-number">{toSend.length}<span>aptos para envio agora</span></div>
         <div className="campaigns-dispatch-details"><div><ShieldCheck size={17}/> {ready.length} com autorização registrada</div><div><CircleAlert size={17}/> {selected.length-ready.length} sem elegibilidade para envio</div><div><Clock3 size={17}/> {deliveredIds.size} já enviados ou em processamento</div></div>
         <button type="button" className="campaigns-send-button" disabled={sending||pending||!toSend.length||toSend.length>20} onClick={send}><Send size={18}/>{sending?'Enviando '+progress.done+' de '+progress.total:'Enviar campanha'}<ArrowRight size={18}/></button>
