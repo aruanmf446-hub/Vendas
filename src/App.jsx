@@ -9,6 +9,7 @@ import {
 import { configured, supabase } from './supabase';
 import Outreach from './Outreach.jsx';
 import LeadsTable from './LeadsTable.jsx';
+import Campaigns from './Campaigns.jsx';
 import './outreach.css';
 
 const STAGES = [
@@ -25,7 +26,8 @@ const menu = [
   { id: 'funnel', label: 'Funil de vendas', Icon: Target },
   { id: 'leads', label: 'Meus leads', Icon: UsersRound },
   { id: 'calendar', label: 'Acompanhamentos', Icon: CalendarDays },
-  { id: 'products', label: 'Produtos e serviços', Icon: Package }
+  { id: 'products', label: 'Produtos e serviços', Icon: Package },
+  { id: 'campaigns', label: 'Campanhas de e-mail', Icon: Mail }
 ];
 const today = () => {
   const date = new Date();
@@ -149,7 +151,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('signin');
-  const [active, setActive] = useState('overview');
+  const [active, setActive] = useState(() => window.location.pathname.replace(/\/$/,'') === '/campanhas' ? 'campaigns' : 'overview');
   const [products, setProducts] = useState([]);
   const [leads, setLeads] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -163,6 +165,7 @@ export default function App() {
   const [form, setForm] = useState({});
   const [selectedId, setSelectedId] = useState(null);
   const [outreachId, setOutreachId] = useState(null);
+  const [campaignLeadId, setCampaignLeadId] = useState(null);
   const [activityKind, setActivityKind] = useState('nota');
   const [activityText, setActivityText] = useState('');
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -190,6 +193,11 @@ export default function App() {
     refresh();
   }, [user?.id]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4200); return () => clearTimeout(timer); }, [toast]);
+  useEffect(() => {
+    const handlePop = () => setActive(window.location.pathname.replace(/\/$/,'') === '/campanhas' ? 'campaigns' : 'overview');
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []);
   // Atualiza as respostas recebidas sem atualizar toda a página ou alterar o estado do WhatsApp.
   useEffect(() => {
     if (!permitted(user)) return;
@@ -293,7 +301,7 @@ export default function App() {
   };
   const showContact = lead => { setSelectedId(lead.id);setActivityText('');setActivityKind('nota'); };
   const signOut=async()=>{const {error}=await supabase.auth.signOut();if(error)setToast(error.message);else{setUser(null);setSelectedId(null);setOutreachId(null);} };
-  const navTo = id => {setActive(id);setMobileMenu(false);setSearch('');setStageFilter('todos');};
+  const navTo = id => {setActive(id);setMobileMenu(false);setSearch('');setStageFilter('todos');const path=id==='campaigns'?'/campanhas':'/';if(window.location.pathname!==path)window.history.pushState({},'',path);};
   const stageCount = id=>leads.filter(l=>l.stage===id).length;
   const screenName = menu.find(m=>m.id===active)?.label||'Visão geral';
 
@@ -351,6 +359,7 @@ export default function App() {
           <div className="agenda-summary"><div><Clock3 size={20}/><span><strong>{overdue.length}</strong><small>retornos atrasados</small></span></div><div><CalendarDays size={20}/><span><strong>{upcoming.filter(l=>l.next_follow_up>=today()).length}</strong><small>retornos agendados</small></span></div><div><CheckCheck size={20}/><span><strong>{won.length}</strong><small>vendas concluídas</small></span></div></div>
           <section className="panel agenda-panel"><div className="panel-head"><div><span className="eyebrow muted">SUA AGENDA</span><h3>Acompanhamentos pendentes</h3></div></div>{upcoming.length?<div className="agenda-list">{upcoming.map(l=><button className="agenda-row" key={l.id} onClick={()=>showContact(l)}><div className={'date-block large '+(nextIsLate(l)?'date-late':'')}><strong>{l.next_follow_up.slice(-2)}</strong><span>{shortDate(l.next_follow_up).split(' ')[1]}</span></div><div className="agenda-person"><strong>{l.name}</strong><p>{l.company||'Cliente'} <span>·</span> {productById(l.product_id)?.name||'Produto não informado'}</p></div><StagePill stage={l.stage}/>{nextIsLate(l)&&<span className="late-label">Atrasado</span>}<ArrowUpRight size={18}/></button>)}</div>:<NoContent Icon={CalendarDays} title="Sua agenda está livre" description="Defina a data do próximo acompanhamento ao cadastrar ou editar um lead." action="Cadastrar lead" onClick={()=>openLeadEditor(null)}/>}</section>
         </>}
+        {active==='campaigns'&&<Campaigns leads={leads} products={products} user={user} onRefresh={refresh} selectedLeadId={campaignLeadId}/>}
         {active==='products'&&<>
           <section className="page-intro"><div><span className="eyebrow muted">SEU CATÁLOGO COMERCIAL</span><h1>Produtos & serviços<span className="heading-dot">.</span></h1><p>Organize o que você vende e vincule cada lead ao que ele procura.</p></div><button className="btn btn-primary" onClick={()=>openProductEditor(null)}><Plus size={17}/> Novo produto</button></section>
           <div className="product-info"><Package size={19}/><div><strong>{products.filter(p=>p.active).length} itens ativos no seu catálogo</strong><span>Itens inativos continuam vinculados aos leads já cadastrados.</span></div></div>
@@ -364,7 +373,7 @@ export default function App() {
     {selected&&<div className="drawer-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedId(null)}}><aside className="lead-drawer"><div className="drawer-head"><span className="eyebrow muted">DETALHES DA OPORTUNIDADE</span><button className="icon-btn close-btn" aria-label="Fechar detalhes" onClick={()=>setSelectedId(null)}><X size={20}/></button></div>
       <div className="drawer-title"><span className="client-avatar big">{initials(selected.name)}</span><div><h2>{selected.name}</h2><p>{selected.company||'Contato comercial'}</p></div></div>
       <div className="drawer-stage"><StagePill stage={selected.stage}/><span>{brl(selected.expected_value)}</span></div>{selected.last_whatsapp_reply_at && <div className="drawer-outreach-status"><MessageCircle size={13}/> Última resposta recebida: {longDate(selected.last_whatsapp_reply_at)}</div>}{selected.outreach_status && selected.outreach_status !== 'nao_iniciado' && <div className="drawer-outreach-status"><MessageCircle size={13}/> Prospecção: {{video_enviado:'Vídeo enviado',mensagem_enviada:'Mensagem enviada',aguardando_resposta:'Aguardando resposta',respondeu:'Cliente respondeu'}[selected.outreach_status] || 'Em andamento'}</div>}
-      <div className="drawer-actions"><button className="btn btn-outline" onClick={()=>openLeadEditor(selected)}><Pencil size={16}/> Editar lead</button><button type="button" className="btn btn-whatsapp" onClick={()=>setOutreachId(selected.id)}><MessageCircle size={17}/> Abordagem Comercial <ArrowRight size={14}/></button></div>
+      <div className="drawer-actions"><button className="btn btn-outline" onClick={()=>openLeadEditor(selected)}><Pencil size={16}/> Editar lead</button><button type="button" className="btn btn-whatsapp" onClick={()=>setOutreachId(selected.id)}><MessageCircle size={17}/> Abordagem Comercial <ArrowRight size={14}/></button><button type="button" className="btn btn-outline" onClick={()=>{setCampaignLeadId(selected.id);setSelectedId(null);navTo("campaigns");}}><Mail size={16}/> Preparar e-mail</button></div>
       <div className="drawer-scroll"><div className="detail-section"><div className="detail-caption">INFORMAÇÕES DO LEAD</div><div className="detail-grid"><div><small>Produto de interesse</small><strong>{productById(selected.product_id)?.name||'Não definido'}</strong></div><div><small>Origem</small><strong>{selected.source}</strong></div><div><small>Próximo retorno</small><strong className={nextIsLate(selected)?'attention':''}>{selected.next_follow_up?shortDate(selected.next_follow_up):'Não agendado'}</strong></div><div><small>Prioridade</small><strong className="capitalize">{selected.priority}</strong></div><div><small>Telefone</small><strong>{selected.phone||'Não informado'}</strong></div><div><small>Email</small><strong className="break-text">{selected.email||'Não informado'}</strong></div></div>{selected.notes&&<div className="lead-notes"><FileText size={15}/><p>{selected.notes}</p></div>}</div>
       <div className="detail-section"><div className="detail-caption">ATUALIZAR ETAPA</div><div className="stage-selector"><select value={selected.stage} disabled={saving} onChange={e=>moveStage(selected,e.target.value)} aria-label="Alterar etapa do lead">{STAGES.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select><ChevronDown size={17}/></div></div>
       <div className="detail-section timeline-section"><div className="detail-caption">HISTÓRICO DE CONTATOS <span>{activities.filter(a=>a.lead_id===selected.id).length}</span></div><div className="timeline">{activities.filter(a=>a.lead_id===selected.id).map(a=><div className="timeline-item" key={a.id}><div className="timeline-marker"><Activity size={13}/></div><div><div className="timeline-meta"><strong>{{nota:'Nota',ligacao:'Ligação',whatsapp:'WhatsApp',email:'E-mail',reuniao:'Reunião',etapa:'Mudança de etapa',retorno:'Retorno'}[a.kind]||'Atividade'}</strong><small>{longDate(a.created_at)}</small></div><p>{a.content}</p></div></div>)}{!activities.some(a=>a.lead_id===selected.id)&&<p className="no-timeline">Nenhuma atividade registrada.</p>}</div></div>
