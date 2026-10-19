@@ -76,9 +76,9 @@
 
 
 /* Ação individual diretamente na linha do lead. */
-.lead-actions-cell{white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;gap:10px}
-.lead-actions-cell>svg{color:#97a7bb;flex-shrink:0}
+.lead-actions-cell{white-space:nowrap;text-align:right;vertical-align:middle}
+.lead-actions-cell>svg{color:#97a7bb;vertical-align:middle;margin-left:8px}
 .lead-send-email{display:inline-flex;gap:6px;align-items:center;justify-content:center;border-radius:7px;border:1px solid #cbdaf2;background:#eef4ff;color:#365b99;padding:8px 10px;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer;line-height:1.1}
 .lead-send-email:hover:not(:disabled){background:#dfeafa;border-color:#91b0e3}
 .lead-send-email:disabled{opacity:.38;cursor:not-allowed}
-@media(max-width:680px){.lead-actions-cell{gap:6px}.lead-send-email{font-size:10px;padding:8px 9px}.lead-actions-cell>svg{display:none}}
+@media(max-width:680px){ .lead-actions-cell>svg{margin-left:5px}.lead-send-email{font-size:10px;padding:8px 9px}.lead-actions-cell>svg{display:none}}
