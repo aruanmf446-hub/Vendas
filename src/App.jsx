@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness, CalendarDays,
   Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Clock3, ContactRound, DollarSign,
@@ -58,54 +58,87 @@ function FormField({ label, children, required }) {
   return <label className="field"><span>{label}{required && <b> *</b>}</span>{children}</label>;
 }
 
-function Access({ onUser, mode, setMode }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const ONLY_EMAIL = 'aruanmf446@gmail.com';
+const permitted = user => !!user && user.email?.trim().toLowerCase() === ONLY_EMAIL && !user.is_anonymous;
+
+function Access({ onUser }) {
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState('');
-  const handleSubmit = async e => {
+  const [sent, setSent] = useState(false);
+
+  const handleEmailLink = async e => {
     e.preventDefault();
-    if (!supabase) return;
-    setPending(true); setFeedback('');
+    if (!supabase || pending) return;
+    setPending(true);
+    setFeedback('');
     try {
-      if (mode === 'reset') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-        if (error) throw error;
-        setFeedback('Enviamos um link para redefinir sua senha. Verifique também o spam.');
-      } else if (mode === 'recovery') {
-        const { error } = await supabase.auth.updateUser({ password });
-        if (error) throw error;
-        setFeedback('Senha atualizada com sucesso. Você já pode continuar.');
-        setMode('signin');
-      } else if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
-        if (error) throw error;
-        if (!data.session) setFeedback('Conta criada. Confirme seu e-mail para entrar no CRM.');
-        else onUser(data.user);
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        onUser(data.user);
-      }
-    } catch (error) { setFeedback(error.message || 'Não foi possível autenticar.'); }
-    finally { setPending(false); }
+      const { error } = await supabase.auth.signInWithOtp({
+        email: ONLY_EMAIL,
+        options: {
+          emailRedirectTo: window.location.origin,
+          shouldCreateUser: true,
+        },
+      });
+      if (error) throw error;
+      setSent(true);
+      setFeedback('Um link de acesso foi solicitado. Confira sua caixa de entrada e o spam.');
+    } catch (error) {
+      setFeedback(error?.message || 'Não foi possível enviar o email. Tente novamente.');
+    } finally {
+      setPending(false);
+    }
   };
-  const title = mode === 'signup' ? 'Crie seu espaço comercial' : mode === 'reset' ? 'Recuperar acesso' : mode === 'recovery' ? 'Defina uma nova senha' : 'Seu próximo negócio começa aqui.';
+
   return <main className="access-page">
-    <section className="access-story"><Brand dark/><div className="story-content"><span className="eyebrow light">UM CRM PARA IR MAIS LONGE</span><h1>Mais negócios.<br/><em>Menos oportunidades</em><br/>perdidas.</h1><p>Organize seus contatos, conheça seu pipeline e nunca mais esqueça um retorno importante.</p>
-      <div className="story-stats"><div><span>01</span><strong>Centralize</strong><small>cada oportunidade</small></div><div><span>02</span><strong>Acompanhe</strong><small>o que importa</small></div><div><span>03</span><strong>Conquiste</strong><small>mais clientes</small></div></div>
-    </div><div className="story-bottom">O comercial em boas mãos <span>— CRM PLUS</span></div></section>
-    <section className="access-form-wrap"><div className="access-form"><div className="access-mobile-brand"><Brand/></div><div className="auth-eyebrow">BEM-VINDO AO CRM PLUS</div><h2>{title}</h2><p className="auth-subtitle">{mode === 'reset' ? 'Informe seu email para receber um link de recuperação.' : mode === 'recovery' ? 'Sua nova senha deve ter pelo menos seis caracteres.' : 'Entre para acompanhar leads, produtos e cada passo até a venda.'}</p>
-      {!configured ? <div className="warning-box"><LockKeyhole size={19}/>Configure VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY antes de entrar.</div> :
-      <form onSubmit={handleSubmit} className="auth-fields">
-        {mode !== 'recovery' && <FormField label="Seu email" required><div className="input-icon"><Mail size={17}/><input type="email" required placeholder="voce@empresa.com" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email"/></div></FormField>}
-        {mode !== 'reset' && <FormField label={mode === 'recovery' ? 'Nova senha' : 'Senha'} required><div className="input-icon"><LockKeyhole size={17}/><input type="password" minLength={6} required placeholder="Pelo menos 6 caracteres" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}/></div></FormField>}
-        {mode === 'signin' && <button type="button" className="text-link forgot" onClick={()=>{setMode('reset');setFeedback('');}}>Esqueci minha senha</button>}
-        {feedback && <div className="auth-feedback" role="status">{feedback}</div>}
-        <button type="submit" className="btn btn-primary auth-submit" disabled={pending}>{pending ? 'Processando...' : mode === 'signup' ? 'Criar conta' : mode === 'reset' ? 'Enviar link' : mode === 'recovery' ? 'Salvar nova senha' : 'Entrar no CRM'}<ArrowRight size={17}/></button>
-      </form>}
-      <div className="auth-switch">{mode === 'signin' ? <>Ainda não tem acesso? <button onClick={()=>{setMode('signup');setFeedback('');}}>Criar conta</button></> : <>Já tem uma conta? <button onClick={()=>{setMode('signin');setFeedback('');}}>Fazer login</button></>}</div>
-    </div><footer className="auth-footer">© 2026 CRM PLUS · Tecnologia para vender melhor</footer></section>
+    <section className="access-story">
+      <Brand dark/>
+      <div className="story-content">
+        <div className="eyebrow light"><span className="eyebrow-dot"/> UMA NOVA FORMA DE VENDER</div>
+        <h1>Seus melhores negócios começam com <em>clareza.</em></h1>
+        <p>Uma central comercial elegante, criada para transformar contatos em relacionamentos e oportunidades em vendas.</p>
+        <div className="story-flow" aria-hidden="true">
+          <div className="flow-card flow-incoming">
+            <span className="flow-small-icon"><UsersRound size={17}/></span>
+            <div><small>NOVA OPORTUNIDADE</small><strong>Seu próximo cliente</strong><span>Contato adicionado ao funil</span></div>
+            <span className="flow-indicator"><ArrowUpRight size={16}/></span>
+          </div>
+          <div className="flow-connector"><span/><span/><span/></div>
+          <div className="flow-card flow-confirmed">
+            <span className="flow-small-icon"><CheckCheck size={19}/></span>
+            <div><small>ACOMPANHAMENTO</small><strong>Próximo passo definido</strong><span>Sem perder o momento certo</span></div>
+            <span className="flow-confirm-check"><Check size={15}/></span>
+          </div>
+        </div>
+        <div className="story-stats">
+          <div><span>01 /</span><strong>Conecte</strong><small>seus contatos</small></div>
+          <div><span>02 /</span><strong>Acompanhe</strong><small>cada oportunidade</small></div>
+          <div><span>03 /</span><strong>Conquiste</strong><small>mais negócios</small></div>
+        </div>
+      </div>
+      <div className="story-bottom">Um jeito mais inteligente de vender. <span>CRM PLUS © 2026</span></div>
+    </section>
+    <section className="access-form-wrap">
+      <div className="access-form">
+        <div className="access-mobile-brand"><Brand /></div>
+        <div className="login-symbol"><TrendingUp size={27}/></div>
+        <div className="auth-eyebrow">ESPAÇO COMERCIAL PRIVADO</div>
+        <h2>Seu próximo negócio está esperando.</h2>
+        <p className="auth-subtitle">Entre na sua área de vendas e continue de onde parou, sem complicação.</p>
+        <form onSubmit={handleEmailLink} className="auth-fields">
+          <div className="access-authorized"><span className="access-authorized-symbol"><LockKeyhole size={17}/></span><div><small>ACESSO EXCLUSIVO</small><strong>Conta do administrador</strong></div><span className="authorized-status"><Check size={14}/> Privado</span></div>
+          <FormField label="Email autorizado">
+            <div className="input-icon email-locked"><Mail size={18}/><input type="email" aria-label="Email autorizado" value={ONLY_EMAIL} readOnly/><LockKeyhole size={15}/></div>
+          </FormField>
+          {feedback && <div className={'auth-feedback '+(sent?'feedback-ok':'')} role="status">{sent?<CheckCheck size={18}/>:<CircleHelp size={18}/>}<span>{feedback}</span></div>}
+          {!configured ? <div className="warning-box"><LockKeyhole size={18}/>A integração Supabase ainda precisa ser configurada na Vercel.</div> : <button type="submit" className="btn btn-primary auth-submit" disabled={pending}>
+            {pending ? 'Enviando convite seguro...' : sent ? 'Reenviar link de acesso' : 'Receber link de acesso'}<ArrowRight size={18}/>
+          </button>}
+        </form>
+        <div className="login-guidance"><span className="guidance-icon"><Mail size={18}/></span><p>Um link de entrada será enviado para o email acima. Não é necessário criar uma senha.</p></div>
+        <div className="login-safe"><LockKeyhole size={14}/> Protegido pelo Supabase Auth e pelas políticas de acesso ao banco</div>
+      </div>
+      <footer className="auth-footer">CRM PLUS · Seu comercial, no controle. · <a href="https://crmplus.store" target="_blank" rel="noreferrer">crmplus.store</a></footer>
+    </section>
   </main>;
 }
 
@@ -141,7 +174,15 @@ export default function App() {
     return () => data.subscription.unsubscribe();
   }, []);
   useEffect(() => {
-    if (!user) { setProducts([]); setLeads([]); setActivities([]); return; }
+    if (user && !permitted(user)) {
+      setUser(null);
+      setToast('Este CRM é reservado ao email autorizado.');
+      supabase?.auth.signOut();
+    }
+  }, [user?.id, user?.email]);
+
+  useEffect(() => {
+    if (!permitted(user)) { setProducts([]); setLeads([]); setActivities([]); return; }
     refresh();
   }, [user?.id]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4200); return () => clearTimeout(timer); }, [toast]);
@@ -249,7 +290,7 @@ export default function App() {
   const screenName = menu.find(m=>m.id===active)?.label||'Visão geral';
 
   if (!authReady) return <div className="loading-page"><Brand/><div className="loading-ring"/></div>;
-  if (!user || authMode === 'recovery') return <Access onUser={setUser} mode={authMode} setMode={setAuthMode}/>;
+  if (!permitted(user)) return <Access onUser={setUser}/>;
 
   return <div className="shell">
     <aside className={'sidebar' +(mobileMenu?' is-open':'')}>
