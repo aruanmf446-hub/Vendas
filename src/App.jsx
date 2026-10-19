@@ -71,6 +71,7 @@ function Access({ onUser }) {
     if (!supabase || pending) return;
     setPending(true);
     setFeedback('');
+    setSent(false);
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: ONLY_EMAIL,
@@ -89,55 +90,54 @@ function Access({ onUser }) {
     }
   };
 
-  return <main className="access-page">
-    <section className="access-story">
-      <Brand dark/>
-      <div className="story-content">
-        <div className="eyebrow light"><span className="eyebrow-dot"/> UMA NOVA FORMA DE VENDER</div>
-        <h1>Seus melhores negócios começam com <em>clareza.</em></h1>
-        <p>Uma central comercial elegante, criada para transformar contatos em relacionamentos e oportunidades em vendas.</p>
-        <div className="story-flow" aria-hidden="true">
-          <div className="flow-card flow-incoming">
-            <span className="flow-small-icon"><UsersRound size={17}/></span>
-            <div><small>NOVA OPORTUNIDADE</small><strong>Seu próximo cliente</strong><span>Contato adicionado ao funil</span></div>
-            <span className="flow-indicator"><ArrowUpRight size={16}/></span>
-          </div>
-          <div className="flow-connector"><span/><span/><span/></div>
-          <div className="flow-card flow-confirmed">
-            <span className="flow-small-icon"><CheckCheck size={19}/></span>
-            <div><small>ACOMPANHAMENTO</small><strong>Próximo passo definido</strong><span>Sem perder o momento certo</span></div>
-            <span className="flow-confirm-check"><Check size={15}/></span>
-          </div>
-        </div>
-        <div className="story-stats">
-          <div><span>01 /</span><strong>Conecte</strong><small>seus contatos</small></div>
-          <div><span>02 /</span><strong>Acompanhe</strong><small>cada oportunidade</small></div>
-          <div><span>03 /</span><strong>Conquiste</strong><small>mais negócios</small></div>
+  return <main className="access-page sales-access">
+    <section className="sales-stage" aria-label="CRM Plus Vendas">
+      <div className="sales-stage-top">
+        <Brand dark />
+        <span className="sales-stage-index">COMERCIAL / EDIÇÃO 01</span>
+      </div>
+      <div className="sales-stage-body">
+        <div className="sales-kicker"><i aria-hidden="true" /> RELACIONAMENTO QUE GERA NEGÓCIOS</div>
+        <h1><span>Não deixe</span><span>uma boa venda</span><em>esfriar.</em></h1>
+        <p className="sales-stage-lede">Um produto de interesse. Uma conversa bem conduzida. Um retorno na hora certa. Seu comercial fica mais forte quando cada oportunidade tem um próximo passo.</p>
+      </div>
+      <div className="sales-flow" aria-label="Jornada comercial ilustrativa">
+        <div className="sales-flow-top"><span>DO PRIMEIRO OLÁ AO FECHAMENTO</span><span>O CAMINHO DA VENDA ↗</span></div>
+        <div className="sales-flow-steps">
+          <div className="sales-flow-step"><span className="sales-flow-step-number">01 / CAPTAR</span><strong>Lead recebido</strong><small>Contato e interesse registrados</small></div>
+          <div className="sales-flow-step"><span className="sales-flow-step-number">02 / CONDUZIR</span><strong>Próximo retorno</strong><small>Acompanhamento sem perder o fio</small></div>
+          <div className="sales-flow-step"><span className="sales-flow-step-number">03 / AVANÇAR</span><strong>Negócio em movimento</strong><small>Do interesse à negociação</small></div>
         </div>
       </div>
-      <div className="story-bottom">Um jeito mais inteligente de vender. <span>CRM PLUS © 2026</span></div>
+      <div className="sales-stage-foot"><span>SEU FUNIL TEM HISTÓRIA. A GENTE AJUDA A CONTINUAR.</span><b>CRM PLUS · 2026</b></div>
     </section>
-    <section className="access-form-wrap">
-      <div className="access-form">
-        <div className="access-mobile-brand"><Brand /></div>
-        <div className="login-symbol"><TrendingUp size={27}/></div>
-        <div className="auth-eyebrow">ESPAÇO COMERCIAL PRIVADO</div>
-        <h2>Seu próximo negócio está esperando.</h2>
-        <p className="auth-subtitle">Entre na sua área de vendas e continue de onde parou, sem complicação.</p>
-        <form onSubmit={handleEmailLink} className="auth-fields">
-          <div className="access-authorized"><span className="access-authorized-symbol"><LockKeyhole size={17}/></span><div><small>ACESSO EXCLUSIVO</small><strong>Conta do administrador</strong></div><span className="authorized-status"><Check size={14}/> Privado</span></div>
-          <FormField label="Email autorizado">
-            <div className="input-icon email-locked"><Mail size={18}/><input type="email" aria-label="Email autorizado" value={ONLY_EMAIL} readOnly/><LockKeyhole size={15}/></div>
-          </FormField>
-          {feedback && <div className={'auth-feedback '+(sent?'feedback-ok':'')} role="status">{sent?<CheckCheck size={18}/>:<CircleHelp size={18}/>}<span>{feedback}</span></div>}
-          {!configured ? <div className="warning-box"><LockKeyhole size={18}/>A integração Supabase ainda precisa ser configurada na Vercel.</div> : <button type="submit" className="btn btn-primary auth-submit" disabled={pending}>
-            {pending ? 'Enviando convite seguro...' : sent ? 'Reenviar link de acesso' : 'Receber link de acesso'}<ArrowRight size={18}/>
-          </button>}
+    <section className="sales-entry" aria-label="Acesso ao painel de vendas">
+      <header className="sales-entry-top"><span>CRM PLUS / VENDAS</span><span className="sales-private"><LockKeyhole size={13}/> ÁREA PRIVADA</span></header>
+      <div className="sales-entry-main">
+        <div className="sales-number">ACESSO RESERVADO / 001</div>
+        <h2>Seu comercial, <em>em movimento.</em></h2>
+        <p className="sales-entry-intro">Volte para os seus leads, produtos e acompanhamentos. Tudo o que importa para continuar a próxima conversa.</p>
+        <form onSubmit={handleEmailLink} className="sales-access-form">
+          <div className="sales-account">
+            <span className="sales-account-icon"><LockKeyhole size={18}/></span>
+            <div className="sales-account-text"><small>ACESSO EXCLUSIVO</small><strong>Conta do administrador</strong></div>
+            <span className="sales-account-tag"><Check size={13}/> PRIVADO</span>
+          </div>
+          <label className="sales-field">
+            <span>Email autorizado</span>
+            <span className="sales-email"><Mail size={18}/><input type="email" aria-label="Email autorizado" value={ONLY_EMAIL} readOnly autoComplete="email" /><LockKeyhole size={15}/></span>
+          </label>
+          {feedback && <div className={'sales-notice'+(sent?' success':'')} role="status">{sent?<CheckCheck size={18}/>:<CircleHelp size={18}/>}<span>{feedback}</span></div>}
+          {!configured
+            ? <div className="sales-notice" role="status"><CircleHelp size={18}/><span>A integração Supabase precisa estar configurada na Vercel para liberar o acesso.</span></div>
+            : <button type="submit" className="sales-submit" disabled={pending}>
+                <span>{pending ? 'Enviando acesso seguro...' : sent ? 'Reenviar meu link de acesso' : 'Receber meu link de acesso'}</span><ArrowRight size={19}/>
+              </button>}
         </form>
-        <div className="login-guidance"><span className="guidance-icon"><Mail size={18}/></span><p>Um link de entrada será enviado para o email acima. Não é necessário criar uma senha.</p></div>
-        <div className="login-safe"><LockKeyhole size={14}/> Protegido pelo Supabase Auth e pelas políticas de acesso ao banco</div>
+        <div className="sales-guidance"><Mail size={18}/><span>Sem senha para decorar. Você recebe um link de entrada diretamente no email autorizado.</span></div>
+        <div className="sales-trust"><LockKeyhole size={13}/> Acesso autenticado com Supabase Auth</div>
       </div>
-      <footer className="auth-footer">CRM PLUS · Seu comercial, no controle. · <a href="https://crmplus.store" target="_blank" rel="noreferrer">crmplus.store</a></footer>
+      <footer className="sales-entry-foot"><span>© 2026 CRM PLUS VENDAS</span><a href="https://crmplus.store" target="_blank" rel="noreferrer">crmplus.store <ArrowUpRight size={11} style={{verticalAlign:'middle'}}/></a></footer>
     </section>
   </main>;
 }
