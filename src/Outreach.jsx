@@ -25,22 +25,41 @@ const whatsNumber = value => {
 const initialDraft = (lead, product) => {
   const company = (lead.company || lead.name || 'sua empresa').trim();
   const offer = product?.name || 'uma solução digital';
-  const source = lead.source || 'uma pesquisa comercial';
-  const lookUp = /^(google|instagram|facebook|linkedin|site|whatsapp)$/i.test(source)
-    ? 'pelo ' + source
-    : 'por meio de ' + source;
+  const source = (lead.source || '').trim();
+  const foundAt = ({
+    google: 'no Google',
+    instagram: 'no Instagram',
+    facebook: 'no Facebook',
+    linkedin: 'no LinkedIn',
+    whatsapp: 'no WhatsApp',
+    site: 'na internet'
+  })[source.toLocaleLowerCase('pt-BR')] || (source && source !== 'Indicação' ? 'por meio de ' + source : 'por indicação');
   const template = (product?.outreach_template || '').trim();
-  if (template) return template.replace(/\{cliente\}/gi, company).replace(/\{produto\}/gi, offer).replace(/\{origem\}/gi, source).slice(0, 2700);
+  if (template) return template
+    .replace(/\{cliente\}/gi, company)
+    .replace(/\{produto\}/gi, offer)
+    .replace(/\{origem\}/gi, source || 'Indicação')
+    .slice(0, 2700);
   const isDentistSite = /dentista|odontol[oó]g|cl[ií]nica odontol/i.test(offer);
+  const research = 'Pesquisei aqui e encontrei a ' + company + ' ' + foundAt;
+  const websiteNote = lead.website_not_found
+    ? ', porém não identifiquei nenhum site de vocês e gostaria de apresentar uma solução para fortalecer a presença digital de vocês.'
+    : ' e gostaria de apresentar uma solução para fortalecer a presença digital de vocês.';
+  if (isDentistSite) {
+    return [
+      'Olá, bom dia! Tudo bem? 😊',
+      'Sou da CRM Plus Store, trabalho com desenvolvimento de sites profissionais.',
+      research + websiteNote,
+      'Desenvolvemos um modelo de site exclusivo para clínicas odontológicas, que personalizamos com a identidade visual, fotos, tratamentos e informações de cada clínica.',
+      'Posso enviar uma demonstração rápida para vocês conhecerem? Sem compromisso.'
+    ].join('\n\n');
+  }
   return [
-    'Olá, bom dia! Tudo bem?',
-    'Sou da CRM Plus Store e trabalho com desenvolvimento de sites e soluções digitais profissionais.',
-    'Conheci ' + company + ' ' + lookUp + ' e gostaria de apresentar ' + offer + '.',
-    isDentistSite
-      ? 'Desenvolvemos sites para clínicas odontológicas, personalizados com a identidade visual, fotos, tratamentos e contato direto pelo WhatsApp.'
-      : 'Nossa proposta é personalizada com a identidade da empresa e com o que seus clientes precisam encontrar.',
-    'Acabei de compartilhar um vídeo rápido para mostrar como funciona.',
-    'Posso enviar uma demonstração mais completa para vocês conhecerem, sem compromisso?'
+    'Olá, bom dia! Tudo bem? 😊',
+    'Sou da CRM Plus Store, trabalho com desenvolvimento de soluções digitais profissionais.',
+    research + (lead.website_not_found ? websiteNote : ' e gostaria de apresentar ' + offer + '.'),
+    'Trabalhamos com ' + offer + ', com uma proposta personalizada para a identidade e as necessidades de cada empresa.',
+    'Posso enviar uma demonstração rápida para vocês conhecerem? Sem compromisso.'
   ].join('\n\n');
 };
 const dateISO = () => {
@@ -57,6 +76,7 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [draftSaved, setDraftSaved] = useState(true);
+  const [websiteNotFound, setWebsiteNotFound] = useState(!!lead.website_not_found);
   const number = whatsNumber(lead.phone);
   const validNumber = digitsOnly(lead.phone).length >= 10 && digitsOnly(lead.phone).length <= 13;
   const url = (product?.video_url || '').trim();
@@ -96,6 +116,29 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
       alert('Etapa registrada no CRM.');
     } catch (error) { alert('Não foi possível registrar a etapa: ' + error.message); }
     finally { setSaving(false); }
+  };
+  const updateWebsiteFinding = async checked => {
+    if (saving) return;
+    setSaving(true);
+    setNotice('');
+    try {
+      const { error } = await supabase.from('crm_leads')
+        .update({ website_not_found: checked, updated_at: new Date().toISOString() })
+        .eq('id', lead.id).eq('owner_id', userId);
+      if (error) throw error;
+      setWebsiteNotFound(checked);
+      // Explicitly regenerate: do not silently claim the clinic has no site.
+      setText(initialDraft({ ...lead, website_not_found: checked }, product));
+      setDraftSaved(false);
+      await onRefresh();
+      setNotice(checked
+        ? 'Pesquisa confirmada. O novo texto inclui que você não identificou site para esta clínica.'
+        : 'Texto atualizado sem a afirmação sobre ausência de site.');
+    } catch (error) {
+      setNotice('Não foi possível salvar a confirmação: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
   };
   const saveDraft = async () => {
     if (saving) return;
@@ -193,10 +236,11 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
           <section className="outreach-step">
             <div className="outreach-step-title"><span className="outreach-step-index">02</span><div><div className="outreach-overline">TEXTO PERSONALIZADO</div><h3>Continue a conversa.</h3></div><MessageCircle size={21}/></div>
             <p className="outreach-explain">A mensagem usa os campos do lead. Ajuste o texto, copie ou abra o WhatsApp com tudo preenchido.</p>
+            <label className="outreach-website-checkbox"><input type="checkbox" checked={websiteNotFound} disabled={saving} onChange={e=>updateWebsiteFinding(e.target.checked)}/><span><strong>Não identifiquei site da clínica na pesquisa</strong><small>Marque somente se você conferiu. A mensagem será atualizada com essa informação.</small></span></label>
             <label htmlFor="outreach-message" className="outreach-text-label">MENSAGEM PARA {lead.company || lead.name}</label>
             <textarea id="outreach-message" className="outreach-message" rows={8} maxLength={2700} value={text} onChange={e=>{setText(e.target.value);setDraftSaved(false);}}/>
             <div className="outreach-message-foot"><span>{text.length} / 2700 caracteres {draftSaved?'· Salvo':'· Alterações não salvas'}</span><div className="outreach-actions-wrap">
-              <button type="button" className="outreach-secondary" onClick={()=>{setText(initialDraft(lead,product));setDraftSaved(false);}}><Sparkles size={16}/> Gerar novamente</button>
+              <button type="button" className="outreach-secondary" onClick={()=>{setText(initialDraft({ ...lead, website_not_found: websiteNotFound },product));setDraftSaved(false);}}><Sparkles size={16}/> Gerar novamente</button>
               <button type="button" className="outreach-secondary" disabled={saving||!text.trim()||draftSaved} onClick={saveDraft}><Save size={15}/> Salvar texto</button>
             </div></div>
             <div className="outreach-action-pair">
