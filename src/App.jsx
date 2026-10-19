@@ -78,7 +78,7 @@ function Access({ onUser, mode, setMode }) {
         setFeedback('Senha atualizada com sucesso. Você já pode continuar.');
         setMode('signin');
       } else if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
         if (!data.session) setFeedback('Conta criada. Confirme seu e-mail para entrar no CRM.');
         else onUser(data.user);
@@ -249,7 +249,7 @@ export default function App() {
   const screenName = menu.find(m=>m.id===active)?.label||'Visão geral';
 
   if (!authReady) return <div className="loading-page"><Brand/><div className="loading-ring"/></div>;
-  if (!user) return <Access onUser={setUser} mode={authMode} setMode={setAuthMode}/>;
+  if (!user || authMode === 'recovery') return <Access onUser={setUser} mode={authMode} setMode={setAuthMode}/>;
 
   return <div className="shell">
     <aside className={'sidebar' +(mobileMenu?' is-open':'')}>
