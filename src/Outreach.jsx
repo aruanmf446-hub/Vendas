@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, Clipboard, Clock3, ExternalLink, Film, Globe2, Link2, LockKeyhole, MessageCircle, Paperclip, PlayCircle, Save, Send, Sparkles, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, Clipboard, Clock3, Download, ExternalLink, Film, Globe2, Link2, LockKeyhole, MessageCircle, Paperclip, PlayCircle, Save, Send, Share2, Sparkles, Upload, X } from 'lucide-react';
 import { supabase } from './supabase';
 
 const STAGES = {
@@ -62,6 +62,10 @@ const initialDraft = (lead, product) => {
     'Posso enviar uma demonstração rápida para vocês conhecerem? Sem compromisso.'
   ].join('\n\n');
 };
+// Reutiliza o arquivo escolhido para outros leads do mesmo produto enquanto a aba estiver aberta.
+const selectedVideos = new Map();
+const isVideoFile = file => !!file && (file.type.startsWith('video/') || /\.(mp4|m4v|mov|webm|ogg)$/i.test(file.name));
+const isDirectVideoUrl = url => /\.(mp4|m4v|webm|ogg)(?:[?#]|$)/i.test(url);
 const dateISO = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -71,8 +75,11 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
   const [text, setText] = useState(() => lead.outreach_message || initialDraft(lead, product));
   const [status, setStatus] = useState(lead.outreach_status || 'nao_iniciado');
   const [followUp, setFollowUp] = useState(lead.next_follow_up || '');
-  const [localVideo, setLocalVideo] = useState(null);
+  const videoKey = product?.id || 'sem-produto';
+  const [localVideo, setLocalVideo] = useState(() => selectedVideos.get(videoKey) || null);
   const [preview, setPreview] = useState('');
+  const [videoError, setVideoError] = useState('');
+  const [mediaInstruction, setMediaInstruction] = useState('');
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [draftSaved, setDraftSaved] = useState(true);
@@ -81,6 +88,10 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
   const validNumber = digitsOnly(lead.phone).length >= 10 && digitsOnly(lead.phone).length <= 13;
   const url = (product?.video_url || '').trim();
   const validVideoUrl = /^https:\/\//i.test(url);
+  const videoSource = preview || (validVideoUrl && isDirectVideoUrl(url) ? url : '');
+  const canShareVideo = !!localVideo && typeof navigator.share === 'function'
+    && typeof navigator.canShare === 'function'
+    && navigator.canShare({ files: [localVideo] });
   const current = STAGES[status] ?? 0;
 
   // O webhook pode atualizar o status enquanto a abordagem estiver aberta.
@@ -179,6 +190,63 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
     window.open(href, '_blank', 'noopener,noreferrer');
     setNotice(withText ? 'A conversa foi aberta com a mensagem preenchida. Confirme o envio no WhatsApp e depois marque a etapa.' : 'A conversa foi aberta. Anexe o vídeo diretamente no WhatsApp e confirme o envio antes de marcar a etapa.');
   };
+  const chooseVideo = file => {
+    if (!file) return;
+    if (!isVideoFile(file)) {
+      setVideoError('Escolha um vídeo MP4, MOV ou WebM. Este arquivo não foi reconhecido como vídeo.');
+      return;
+    }
+    selectedVideos.set(videoKey, file);
+    setLocalVideo(file);
+    setVideoError('');
+    setMediaInstruction('Vídeo selecionado. No celular use Compartilhar vídeo; no computador anexe o arquivo pelo WhatsApp Web.');
+  };
+  const removeVideo = () => {
+    selectedVideos.delete(videoKey);
+    setLocalVideo(null);
+    setVideoError('');
+    setMediaInstruction('');
+  };
+  const downloadVideo = () => {
+    if (localVideo) {
+      const objectUrl = URL.createObjectURL(localVideo);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = localVideo.name || 'video-de-apresentacao.mp4';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+      setMediaInstruction('O vídeo foi preparado para download. No WhatsApp Web, clique no + (anexar), selecione Fotos e vídeos e escolha o arquivo baixado.');
+      return;
+    }
+    if (validVideoUrl) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setMediaInstruction('Abra o vídeo no link e salve o arquivo MP4 antes de anexá-lo no WhatsApp. O link não envia o arquivo automaticamente.');
+    }
+  };
+  const shareVideo = async () => {
+    if (!canShareVideo) {
+      setMediaInstruction('Este navegador não oferece compartilhamento direto de arquivos. Baixe o vídeo e anexe manualmente no WhatsApp.');
+      return;
+    }
+    try {
+      await navigator.share({ files: [localVideo], title: 'Vídeo de apresentação' });
+      setMediaInstruction('O compartilhamento foi aberto. Confirme o envio do arquivo na conversa do WhatsApp antes de marcar esta etapa como enviada.');
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        setMediaInstruction('Não foi possível compartilhar o arquivo por este dispositivo. Use Baixar vídeo e anexe-o manualmente no WhatsApp.');
+      }
+    }
+  };
+  const openVideoWhatsApp = () => {
+    if (!validNumber) { setMediaInstruction('Confira o número do WhatsApp no cadastro do lead.'); return; }
+    const href = 'https://wa.me/' + number;
+    const opened = window.open(href, '_blank', 'noopener,noreferrer');
+    setMediaInstruction(opened
+      ? 'Conversa aberta. No WhatsApp, clique em + (anexar) → Fotos e vídeos, escolha o MP4 e confirme o envio. Só então marque Vídeo enviado.'
+      : 'Se o navegador bloquear a nova aba, permita pop-ups ou abra o WhatsApp manualmente. Depois anexe o MP4 pelo botão +.');
+  };
   const copyText = async () => {
     try {
       await navigator.clipboard.writeText(text);
@@ -218,21 +286,33 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
 
           <section className="outreach-step">
             <div className="outreach-step-title"><span className="outreach-step-index">01</span><div><div className="outreach-overline">PRIMEIRO CONTATO</div><h3>Apresente o vídeo.</h3></div><Film size={21}/></div>
-            <p className="outreach-explain">Selecione o vídeo do produto ou um arquivo do seu computador. O vídeo é anexado e enviado manualmente no WhatsApp, antes da mensagem.</p>
+            <p className="outreach-explain">Selecione e confira o vídeo. No celular, compartilhe o arquivo pelo menu do aparelho; no computador, anexe o MP4 manualmente na conversa do WhatsApp antes da mensagem.</p>
             <div className="outreach-media">
               <div className="outreach-media-icon"><PlayCircle size={27}/></div>
               <div className="outreach-media-detail">
                 <strong>{localVideo ? localVideo.name : validVideoUrl ? 'Vídeo vinculado a ' + product.name : 'Nenhum vídeo selecionado'}</strong>
-                <span>{localVideo ? 'Arquivo temporário neste navegador' : validVideoUrl ? 'Biblioteca de vídeos do produto' : 'Configure a URL no cadastro do produto ou escolha um arquivo'}</span>
+                <span>{localVideo ? 'Arquivo selecionado · ' + (localVideo.size / (1024 * 1024)).toFixed(1) + ' MB · disponível nesta aba' : validVideoUrl ? 'Vídeo do produto · salve o arquivo para anexar no WhatsApp' : 'Selecione um MP4 ou configure um link direto no produto'}</span>
               </div>
               {validVideoUrl && !localVideo && <a className="outreach-icon-button" href={url} target="_blank" rel="noreferrer" title="Abrir vídeo" aria-label="Abrir vídeo"><ExternalLink size={17}/></a>}
             </div>
-            {preview && <video controls preload="metadata" className="outreach-video-preview" src={preview} aria-label="Prévia do vídeo selecionado"/>}
-            <div className="outreach-actions-wrap">
-              <label className="outreach-secondary outreach-file"><Paperclip size={16}/> Escolher vídeo local <input type="file" accept="video/*" onChange={e=>setLocalVideo(e.target.files?.[0] || null)} /></label>
-              {validVideoUrl && <button type="button" className="outreach-secondary" onClick={copyLink}><Link2 size={16}/> Copiar link do vídeo</button>}
-              <button type="button" className="outreach-secondary" onClick={()=>openWhatsApp(false)} disabled={!validNumber}><MessageCircle size={16}/> Abrir WhatsApp para anexar</button>
+            {videoSource && <video key={videoSource} controls playsInline preload="metadata" className="outreach-video-preview"
+              src={videoSource} aria-label="Prévia do vídeo selecionado"
+              onLoadedMetadata={()=>setVideoError('')}
+              onError={()=>setVideoError('Não foi possível reproduzir o vídeo neste navegador. Experimente um MP4 com vídeo H.264 e áudio AAC. Você ainda pode baixar e anexar o arquivo.')}/>}
+            {videoError && <div className="outreach-video-error" role="alert">{videoError}</div>}
+            <div className="outreach-video-help">
+              <strong>O WhatsApp não anexa arquivos pelo link de abertura da conversa.</strong>
+              <span>Envie o arquivo MP4, não o endereço do CRM. No computador: baixe o vídeo, abra o WhatsApp e anexe em <b>+ → Fotos e vídeos</b>. No celular: use o compartilhamento do aparelho, quando disponível.</span>
             </div>
+            <div className="outreach-actions-wrap outreach-video-actions">
+              <label className="outreach-secondary outreach-file"><Paperclip size={16}/> {localVideo ? 'Trocar vídeo' : 'Escolher arquivo'} <input type="file" accept="video/*,.mp4,.m4v,.mov,.webm" onChange={e=>{ chooseVideo(e.target.files?.[0]); e.target.value=''; }} /></label>
+              {localVideo && <button type="button" className="outreach-secondary" onClick={removeVideo}><X size={15}/> Remover</button>}
+              {(localVideo || validVideoUrl) && <button type="button" className="outreach-secondary" onClick={downloadVideo}><Download size={16}/> {localVideo ? 'Baixar vídeo' : 'Abrir / baixar vídeo'}</button>}
+              {canShareVideo && <button type="button" className="outreach-share-video" onClick={shareVideo}><Share2 size={16}/> Compartilhar arquivo</button>}
+              <button type="button" className="outreach-share-video" onClick={openVideoWhatsApp} disabled={!validNumber}><MessageCircle size={16}/> Abrir WhatsApp</button>
+            </div>
+            {mediaInstruction && <div className="outreach-video-instruction" role="status">{mediaInstruction}</div>}
+            {!localVideo && validVideoUrl && <div className="outreach-video-link-hint">O link do produto só abre o arquivo; não o envia como mídia. {isDirectVideoUrl(url) ? 'Confira a prévia acima.' : 'Para mostrar uma prévia, use uma URL direta para MP4/WebM ou selecione um arquivo local.'}</div>}
             <div className="outreach-confirm"><div><strong>Já enviou o vídeo no WhatsApp?</strong><span>Marque somente depois de confirmar o envio na conversa.</span></div><button type="button" disabled={saving||current>=1} onClick={()=>updateStatus('video_enviado','Vídeo enviado ao cliente pelo WhatsApp (confirmação manual).')} className={'outreach-confirm-button '+(current>=1?'done':'')}>{current>=1?<><CheckCircle2 size={16}/> Confirmado</>:<><Check size={16}/> Marcar vídeo enviado</>}</button></div>
           </section>
 
@@ -262,7 +342,7 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
             {current>=3 && <button className="outreach-replied" type="button" disabled={saving||status==='respondeu'} onClick={()=>updateStatus('respondeu','Cliente respondeu à abordagem por WhatsApp (confirmação manual).')}><CheckCircle2 size={17}/>{status==='respondeu'?'Resposta registrada':'O cliente respondeu? Registrar resposta'}</button>}
           </section>
           {notice&&<div role="status" className="outreach-notice">{notice}</div>}
-          <div className="outreach-disclaimer"><LockKeyhole size={15}/> O envio continua manual pelo WhatsApp Business. Quando a coexistência oficial da Meta estiver autorizada, o CRM poderá registrar automaticamente as respostas. Arquivos locais não são armazenados pelo CRM.</div>
+          <div className="outreach-disclaimer"><LockKeyhole size={15}/> O envio só é confirmado por você no WhatsApp. O CRM não envia mídia automaticamente, não publica o vídeo e não armazena arquivos locais no Supabase. O arquivo escolhido fica disponível somente enquanto esta aba estiver aberta.</div>
         </div>
       </div>
     </section>
