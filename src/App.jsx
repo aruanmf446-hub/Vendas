@@ -9,7 +9,7 @@ import {
 import { configured, supabase } from './supabase';
 import Outreach from './Outreach.jsx';
 import LeadsTable from './LeadsTable.jsx';
-import Campaigns from './Campaigns.jsx';
+import EmailComposer from './EmailComposer.jsx';
 import './outreach.css';
 
 const STAGES = [
@@ -26,8 +26,7 @@ const menu = [
   { id: 'funnel', label: 'Funil de vendas', Icon: Target },
   { id: 'leads', label: 'Meus leads', Icon: UsersRound },
   { id: 'calendar', label: 'Acompanhamentos', Icon: CalendarDays },
-  { id: 'products', label: 'Produtos e serviços', Icon: Package },
-  { id: 'campaigns', label: 'Campanhas de e-mail', Icon: Mail }
+  { id: 'products', label: 'Produtos e serviços', Icon: Package }
 ];
 const today = () => {
   const date = new Date();
@@ -151,7 +150,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('signin');
-  const [active, setActive] = useState(() => window.location.pathname.replace(/\/$/,'') === '/campanhas' ? 'campaigns' : 'overview');
+  const [active, setActive] = useState('overview');
   const [products, setProducts] = useState([]);
   const [leads, setLeads] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -165,7 +164,7 @@ export default function App() {
   const [form, setForm] = useState({});
   const [selectedId, setSelectedId] = useState(null);
   const [outreachId, setOutreachId] = useState(null);
-  const [campaignLeadId, setCampaignLeadId] = useState(null);
+  const [emailLeadId, setEmailLeadId] = useState(null);
   const [activityKind, setActivityKind] = useState('nota');
   const [activityText, setActivityText] = useState('');
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -194,9 +193,7 @@ export default function App() {
   }, [user?.id]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4200); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => {
-    const handlePop = () => setActive(window.location.pathname.replace(/\/$/,'') === '/campanhas' ? 'campaigns' : 'overview');
-    window.addEventListener('popstate', handlePop);
-    return () => window.removeEventListener('popstate', handlePop);
+    if (window.location.pathname.replace(/\/$/,'') === '/campanhas') window.history.replaceState({}, '', '/');
   }, []);
   // Atualiza as respostas recebidas sem atualizar toda a página ou alterar o estado do WhatsApp.
   useEffect(() => {
@@ -221,6 +218,7 @@ export default function App() {
   }
   const productById = id => products.find(p=>p.id===id);
   const selected = leads.find(l=>l.id===selectedId);
+  const emailLead = leads.find(l=>l.id===emailLeadId);
   const outreachLead = leads.find(l=>l.id===outreachId);
   const won = leads.filter(l=>l.stage==='ganho');
   const openLeads = leads.filter(isOpen);
@@ -300,8 +298,9 @@ export default function App() {
     setSaving(false);
   };
   const showContact = lead => { setSelectedId(lead.id);setActivityText('');setActivityKind('nota'); };
-  const signOut=async()=>{const {error}=await supabase.auth.signOut();if(error)setToast(error.message);else{setUser(null);setSelectedId(null);setOutreachId(null);} };
-  const navTo = id => {setActive(id);setMobileMenu(false);setSearch('');setStageFilter('todos');const path=id==='campaigns'?'/campanhas':'/';if(window.location.pathname!==path)window.history.pushState({},'',path);};
+  const openEmail = lead => {setSelectedId(null);setEmailLeadId(lead.id);setMobileMenu(false);};
+  const signOut=async()=>{const {error}=await supabase.auth.signOut();if(error)setToast(error.message);else{setUser(null);setSelectedId(null);setOutreachId(null);setEmailLeadId(null);} };
+  const navTo = id => {setActive(id);setMobileMenu(false);setSearch('');setStageFilter('todos');if(window.location.pathname!=='/')window.history.replaceState({},'', '/');};
   const stageCount = id=>leads.filter(l=>l.stage===id).length;
   const screenName = menu.find(m=>m.id===active)?.label||'Visão geral';
 
@@ -352,14 +351,13 @@ export default function App() {
         {active==='leads'&&<>
           <section className="page-intro"><div><span className="eyebrow muted">RELACIONAMENTO É TUDO</span><h1>Meus leads<span className="heading-dot">.</span></h1><p>Pesquise, ordene pelo cabeçalho ou abra o filtro ao lado de cada coluna.</p></div><button className="btn btn-primary" onClick={()=>openLeadEditor(null)}><Plus size={17}/> Adicionar lead</button></section>
           <LeadsTable leads={leads} products={products} search={search} onSearch={setSearch}
-            stageFilter={stageFilter} onStageFilter={setStageFilter} onSelect={showContact}/>
+            stageFilter={stageFilter} onStageFilter={setStageFilter} onSelect={showContact} onEmail={openEmail}/>
         </>}
         {active==='calendar'&&<>
           <section className="page-intro"><div><span className="eyebrow muted">RELACIONAMENTOS EM DIA</span><h1>Próximos contatos<span className="heading-dot">.</span></h1><p>Não deixe uma boa conversa esfriar. Planeje seu próximo movimento.</p></div><button className="btn btn-primary" onClick={()=>openLeadEditor(null)}><Plus size={17}/> Novo lead</button></section>
           <div className="agenda-summary"><div><Clock3 size={20}/><span><strong>{overdue.length}</strong><small>retornos atrasados</small></span></div><div><CalendarDays size={20}/><span><strong>{upcoming.filter(l=>l.next_follow_up>=today()).length}</strong><small>retornos agendados</small></span></div><div><CheckCheck size={20}/><span><strong>{won.length}</strong><small>vendas concluídas</small></span></div></div>
           <section className="panel agenda-panel"><div className="panel-head"><div><span className="eyebrow muted">SUA AGENDA</span><h3>Acompanhamentos pendentes</h3></div></div>{upcoming.length?<div className="agenda-list">{upcoming.map(l=><button className="agenda-row" key={l.id} onClick={()=>showContact(l)}><div className={'date-block large '+(nextIsLate(l)?'date-late':'')}><strong>{l.next_follow_up.slice(-2)}</strong><span>{shortDate(l.next_follow_up).split(' ')[1]}</span></div><div className="agenda-person"><strong>{l.name}</strong><p>{l.company||'Cliente'} <span>·</span> {productById(l.product_id)?.name||'Produto não informado'}</p></div><StagePill stage={l.stage}/>{nextIsLate(l)&&<span className="late-label">Atrasado</span>}<ArrowUpRight size={18}/></button>)}</div>:<NoContent Icon={CalendarDays} title="Sua agenda está livre" description="Defina a data do próximo acompanhamento ao cadastrar ou editar um lead." action="Cadastrar lead" onClick={()=>openLeadEditor(null)}/>}</section>
         </>}
-        {active==='campaigns'&&<Campaigns leads={leads} products={products} user={user} onRefresh={refresh} selectedLeadId={campaignLeadId}/>}
         {active==='products'&&<>
           <section className="page-intro"><div><span className="eyebrow muted">SEU CATÁLOGO COMERCIAL</span><h1>Produtos & serviços<span className="heading-dot">.</span></h1><p>Organize o que você vende e vincule cada lead ao que ele procura.</p></div><button className="btn btn-primary" onClick={()=>openProductEditor(null)}><Plus size={17}/> Novo produto</button></section>
           <div className="product-info"><Package size={19}/><div><strong>{products.filter(p=>p.active).length} itens ativos no seu catálogo</strong><span>Itens inativos continuam vinculados aos leads já cadastrados.</span></div></div>
@@ -373,7 +371,7 @@ export default function App() {
     {selected&&<div className="drawer-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedId(null)}}><aside className="lead-drawer"><div className="drawer-head"><span className="eyebrow muted">DETALHES DA OPORTUNIDADE</span><button className="icon-btn close-btn" aria-label="Fechar detalhes" onClick={()=>setSelectedId(null)}><X size={20}/></button></div>
       <div className="drawer-title"><span className="client-avatar big">{initials(selected.name)}</span><div><h2>{selected.name}</h2><p>{selected.company||'Contato comercial'}</p></div></div>
       <div className="drawer-stage"><StagePill stage={selected.stage}/><span>{brl(selected.expected_value)}</span></div>{selected.last_whatsapp_reply_at && <div className="drawer-outreach-status"><MessageCircle size={13}/> Última resposta recebida: {longDate(selected.last_whatsapp_reply_at)}</div>}{selected.outreach_status && selected.outreach_status !== 'nao_iniciado' && <div className="drawer-outreach-status"><MessageCircle size={13}/> Prospecção: {{video_enviado:'Vídeo enviado',mensagem_enviada:'Mensagem enviada',aguardando_resposta:'Aguardando resposta',respondeu:'Cliente respondeu'}[selected.outreach_status] || 'Em andamento'}</div>}
-      <div className="drawer-actions"><button className="btn btn-outline" onClick={()=>openLeadEditor(selected)}><Pencil size={16}/> Editar lead</button><button type="button" className="btn btn-whatsapp" onClick={()=>setOutreachId(selected.id)}><MessageCircle size={17}/> Abordagem Comercial <ArrowRight size={14}/></button><button type="button" className="btn btn-outline" onClick={()=>{setCampaignLeadId(selected.id);setSelectedId(null);navTo("campaigns");}}><Mail size={16}/> Preparar e-mail</button></div>
+      <div className="drawer-actions"><button className="btn btn-outline" onClick={()=>openLeadEditor(selected)}><Pencil size={16}/> Editar lead</button><button type="button" className="btn btn-whatsapp" onClick={()=>setOutreachId(selected.id)}><MessageCircle size={17}/> Abordagem Comercial <ArrowRight size={14}/></button><button type="button" className="btn btn-outline" onClick={()=>openEmail(selected)} disabled={!selected.email||!!selected.email_opt_out_at}><Mail size={16}/> Enviar e-mail</button></div>
       <div className="drawer-scroll"><div className="detail-section"><div className="detail-caption">INFORMAÇÕES DO LEAD</div><div className="detail-grid"><div><small>Produto de interesse</small><strong>{productById(selected.product_id)?.name||'Não definido'}</strong></div><div><small>Origem</small><strong>{selected.source}</strong></div><div><small>Próximo retorno</small><strong className={nextIsLate(selected)?'attention':''}>{selected.next_follow_up?shortDate(selected.next_follow_up):'Não agendado'}</strong></div><div><small>Prioridade</small><strong className="capitalize">{selected.priority}</strong></div><div><small>Telefone</small><strong>{selected.phone||'Não informado'}</strong></div><div><small>Email</small><strong className="break-text">{selected.email||'Não informado'}</strong></div></div>{selected.notes&&<div className="lead-notes"><FileText size={15}/><p>{selected.notes}</p></div>}</div>
       <div className="detail-section"><div className="detail-caption">ATUALIZAR ETAPA</div><div className="stage-selector"><select value={selected.stage} disabled={saving} onChange={e=>moveStage(selected,e.target.value)} aria-label="Alterar etapa do lead">{STAGES.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select><ChevronDown size={17}/></div></div>
       <div className="detail-section timeline-section"><div className="detail-caption">HISTÓRICO DE CONTATOS <span>{activities.filter(a=>a.lead_id===selected.id).length}</span></div><div className="timeline">{activities.filter(a=>a.lead_id===selected.id).map(a=><div className="timeline-item" key={a.id}><div className="timeline-marker"><Activity size={13}/></div><div><div className="timeline-meta"><strong>{{nota:'Nota',ligacao:'Ligação',whatsapp:'WhatsApp',email:'E-mail',reuniao:'Reunião',etapa:'Mudança de etapa',retorno:'Retorno'}[a.kind]||'Atividade'}</strong><small>{longDate(a.created_at)}</small></div><p>{a.content}</p></div></div>)}{!activities.some(a=>a.lead_id===selected.id)&&<p className="no-timeline">Nenhuma atividade registrada.</p>}</div></div>
@@ -381,6 +379,7 @@ export default function App() {
       </div>
     </aside></div>}
     {outreachLead && <Outreach key={outreachLead.id} lead={outreachLead} product={productById(outreachLead.product_id)} userId={user.id} onClose={()=>setOutreachId(null)} onRefresh={refresh} />}
+    {emailLead && <EmailComposer key={emailLead.id} lead={emailLead} product={productById(emailLead.product_id)} userId={user.id} onClose={()=>setEmailLeadId(null)} onRefresh={refresh} onNotify={setToast} />}
     {modal&&<div className="modal-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="editor-modal" role="dialog" aria-modal="true" aria-label={modal==='lead'?'Cadastro de lead':'Cadastro de produto'}><div className="modal-head"><div><span className="eyebrow muted">{modal==='lead'?'GESTÃO DE OPORTUNIDADES':'CATÁLOGO COMERCIAL'}</span><h2>{editing?'Editar ':'Novo '}{modal==='lead'?'lead':'produto ou serviço'}</h2><p>{modal==='lead'?'Registre as informações e mantenha o acompanhamento em dia.':'Defina o que sua empresa oferece.'}</p></div><button aria-label="Fechar formulário" className="icon-btn close-btn" onClick={()=>setModal(null)}><X size={21}/></button></div>
       {modal==='lead'?<form onSubmit={saveLead} className="editor-form"><div className="form-grid"><FormField label="Nome do lead" required><input required minLength={2} maxLength={140} value={form.name||''} onChange={e=>field('name',e.target.value)} placeholder="Nome completo"/></FormField><FormField label="Empresa / negócio"><input value={form.company||''} onChange={e=>field('company',e.target.value)} placeholder="Empresa (opcional)"/></FormField><FormField label="Telefone / WhatsApp"><input type="tel" value={form.phone||''} onChange={e=>field('phone',e.target.value)} placeholder="(91) 99999-9999"/></FormField><FormField label="E-mail"><input type="email" value={form.email||''} onChange={e=>field('email',e.target.value)} placeholder="contato@empresa.com"/></FormField><FormField label="Produto de interesse"><select value={form.product_id||''} onChange={e=>{const p=products.find(x=>x.id===e.target.value);setForm(old=>({...old,product_id:e.target.value,expected_value:p&&(!old.expected_value||old.expected_value==='0')?String(p.price):old.expected_value}));}}><option value="">Selecione um produto</option>{products.filter(p=>p.active||p.id===form.product_id).map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></FormField><FormField label="Valor estimado (R$)"><input type="number" min="0" step="0.01" value={form.expected_value??''} onChange={e=>field('expected_value',e.target.value)} placeholder="0,00"/></FormField><FormField label="Etapa"><select value={form.stage||'novo'} onChange={e=>field('stage',e.target.value)}>{STAGES.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></FormField><FormField label="Prioridade"><select value={form.priority||'media'} onChange={e=>field('priority',e.target.value)}><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option></select></FormField><FormField label="Origem do lead"><select value={form.source||'Indicação'} onChange={e=>field('source',e.target.value)}>{['Indicação','WhatsApp','Instagram','Site','Google','Ligação','Prospecção ativa','Evento','Outro'].map(s=><option key={s}>{s}</option>)}</select></FormField><FormField label="Próximo acompanhamento"><input type="date" value={form.next_follow_up||''} onChange={e=>field('next_follow_up',e.target.value)}/></FormField><div className="full"><FormField label="Observações"><textarea rows={3} value={form.notes||''} onChange={e=>field('notes',e.target.value)} placeholder="Necessidades, contexto da negociação, dúvidas do cliente..."/></FormField></div></div><div className="modal-actions"><button className="btn btn-outline" type="button" onClick={()=>setModal(null)}>Cancelar</button><button className="btn btn-primary" disabled={saving} type="submit"><Check size={16}/>{saving?'Salvando...':editing?'Salvar alterações':'Cadastrar lead'}</button></div></form>:
         <form onSubmit={saveProduct} className="editor-form"><div className="form-grid"><div className="full"><FormField label="Nome do produto ou serviço" required><input required minLength={2} maxLength={140} value={form.name||''} onChange={e=>field('name',e.target.value)} placeholder="Ex.: Site institucional, Plano Plus, Consultoria..."/></FormField></div><FormField label="Categoria"><select value={form.category||'Serviço'} onChange={e=>field('category',e.target.value)}><option>Serviço</option><option>Produto</option><option>Assinatura</option><option>Projeto</option><option>Outro</option></select></FormField><FormField label="Valor de referência (R$)"><input type="number" min="0" step="0.01" value={form.price??''} onChange={e=>field('price',e.target.value)} placeholder="0,00"/></FormField><div className="full"><FormField label="Descrição"><textarea rows={4} value={form.description||''} onChange={e=>field('description',e.target.value)} placeholder="O que está incluído? Diferenciais, escopo..."/></FormField></div><div className="full"><FormField label="Vídeo de apresentação (URL opcional)"><input type="url" maxLength={1000} pattern="https://.*" value={form.video_url||''} onChange={e=>field('video_url',e.target.value)} placeholder="https://seusite.com/video.mp4"/></FormField><span className="product-video-hint">O vídeo ficará associado a este produto. Anexe-o manualmente no WhatsApp.</span></div><div className="full"><FormField label="Modelo de mensagem (opcional)"><textarea rows={4} maxLength={2700} value={form.outreach_template||''} onChange={e=>field('outreach_template',e.target.value)} placeholder="Olá! Conheci {cliente} pelo {origem} e gostaria de apresentar {produto}..."/></FormField><span className="product-video-hint">Use <code>{'{cliente}'}</code>, <code>{'{produto}'}</code> e <code>{'{origem}'}</code>. Deixe em branco para usar a mensagem padrão do CRM.</span></div><div className="full"><label className="checkbox-label"><input type="checkbox" checked={form.active!==false} onChange={e=>field('active',e.target.checked)}/>Produto ativo para novas oportunidades</label></div></div><div className="modal-actions"><button className="btn btn-outline" type="button" onClick={()=>setModal(null)}>Cancelar</button><button className="btn btn-primary" disabled={saving} type="submit"><Check size={16}/>{saving?'Salvando...':editing?'Salvar alterações':'Cadastrar produto'}</button></div></form>}
