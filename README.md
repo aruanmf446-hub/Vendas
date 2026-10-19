@@ -62,13 +62,10 @@ A implementação está preparada, mas **não está ativada até o número ser a
 Migrações: `supabase/migrations/20261019_crm_whatsapp_inbox.sql` e `supabase/migrations/20261019_crm_whatsapp_inbound_rpc.sql`. Tabelas existentes e políticas de leads foram preservadas; somente a nova tabela tem permissão de leitura para o proprietário.
 
 
-## Campanhas de e-mail
+## Envio de e-mail individual
 
-- Acesse `/campanhas` no aplicativo ou o item **Campanhas de e-mail** no menu.
-- Configure no projeto Vercel a variável de servidor `RESEND_API_KEY` (nunca use `VITE_`). Domínio de envio: `crmplus.store`.
-- Em cada campanha, personalize o assunto e corpo com `{nome}`, `{clinica}`, `{empresa}`, `{produto}`, `{origem}` e salve o rascunho.
-- Selecione contatos. Somente leads com autorização documentada e sem opt-out podem ser enviados pelo Resend; contatos sem autorização podem usar a preparação de mensagem e a revisão manual por outro canal permitido.
-- O endpoint `/api/campaign-send` valida a sessão e a propriedade do lead, consentimento, lista de destinatários, duplicidade e teto interno de 30 envios a cada 24 horas.
-- Persistência em `crm_email_campaigns`, `crm_email_deliveries` e campos de permissão de `crm_leads`. Migrations SQL em `supabase/migrations/20261019_crm_campanhas_*.sql`.
-- Não usa chave de envio no navegador. O histórico marca a mensagem aceita pelo Resend, não sua leitura ou entrega final.
-- Para testes, use apenas endereço próprio previamente autorizado. Nunca dispare em lote para leads de pesquisa sem opt-in.
+Na lista **Meus leads**, clique no botão **Enviar e-mail** na linha do contato, ou abra o lead e clique em **Enviar e-mail**. O editor sugere um assunto e uma mensagem contextual, permite ajustes e guarda o rascunho no navegador.
+
+**Abrir aplicativo de e-mail** cria uma mensagem no cliente de e-mail instalado no dispositivo usando `mailto:`. O próprio operador confere, envia e, se quiser, confirma em **Já enviei · registrar** para incluir a atividade no histórico. Abrir o aplicativo não equivale a enviar, e o CRM não confirma recebimento nem entrega.
+
+Não há módulo de campanhas, disparos em massa nem endpoint de envio pelo Resend. Contatos descadastrados são bloqueados. As antigas migrações de campanhas permanecem registradas para manter rastreabilidade do histórico de banco, sem funcionalidades ativas no CRM.
