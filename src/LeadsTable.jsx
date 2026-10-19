@@ -81,9 +81,12 @@ function ColumnFilter({ column, rect, draft, setDraft, options, onApply, onClear
   const [optionSearch, setOptionSearch] = useState('');
   const visible = isValue || isDate ? presets : presets.filter(o => norm(o.label).includes(norm(optionSearch)));
   const popWidth = Math.min(328, window.innerWidth - 20);
-  const placeBottom = rect.bottom + 425 > window.innerHeight && rect.top > 440;
+  const spaceBelow = window.innerHeight - rect.bottom - 12;
+  const spaceAbove = rect.top - 12;
+  const placeBottom = spaceBelow < 360 && spaceAbove > spaceBelow;
   const left = Math.max(10, Math.min(rect.left, window.innerWidth - popWidth - 10));
-  const top = placeBottom ? Math.max(12, rect.top - 12) : Math.max(12, rect.bottom + 8);
+  const top = placeBottom ? Math.max(12, rect.top - 8) : Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 200));
+  const maxHeight = Math.max(175, Math.min(510, placeBottom ? spaceAbove : window.innerHeight - top - 12));
   useEffect(() => {
     const onEscape = e => { if (e.key === 'Escape') onClose(); };
     const onOutside = e => { if (root.current && !root.current.contains(e.target) && !e.target.closest('[data-filter-trigger]')) onClose(); };
@@ -107,7 +110,7 @@ function ColumnFilter({ column, rect, draft, setDraft, options, onApply, onClear
   return createPortal(
     <div className={'col-filter-panel' + (placeBottom ? ' open-above' : '')} role="dialog"
       aria-label={'Filtrar ' + column.label} ref={root}
-      style={{ left, top, width: popWidth, transform: placeBottom ? 'translateY(-100%)' : 'none' }}>
+      style={{ left, top, width: popWidth, maxHeight, transform: placeBottom ? 'translateY(-100%)' : 'none' }}>
       <div className="cf-title"><span><Filter size={15}/> Filtrar {column.label}</span><button type="button" onClick={onClose} aria-label="Fechar filtro"><X size={17}/></button></div>
       <form onSubmit={e => { e.preventDefault(); onApply(); }}>
         {(!isValue && !isDate) && <>
