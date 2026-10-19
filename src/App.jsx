@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { configured, supabase } from './supabase';
 import Outreach from './Outreach.jsx';
+import LeadsTable from './LeadsTable.jsx';
 import './outreach.css';
 
 const STAGES = [
@@ -211,11 +212,6 @@ export default function App() {
   const pipelineValue = openLeads.reduce((s,l)=>s+Number(l.expected_value||0),0);
   const wonValue = won.reduce((s,l)=>s+Number(l.expected_value||0),0);
   const upcoming = useMemo(()=>openLeads.filter(l=>l.next_follow_up).sort((a,b)=>a.next_follow_up.localeCompare(b.next_follow_up)),[leads]);
-  const displayed = useMemo(() => {
-    const q=search.toLocaleLowerCase('pt-BR');
-    return leads.filter(l=>(stageFilter==='todos'||l.stage===stageFilter) &&
-      [l.name,l.company,l.email,l.phone,productById(l.product_id)?.name].join(' ').toLocaleLowerCase('pt-BR').includes(q));
-  },[leads,search,stageFilter,products]);
   const openLeadEditor = lead => {
     setEditing(lead || null);
     setForm(lead ? { ...lead, product_id:lead.product_id||'', next_follow_up:lead.next_follow_up||'', expected_value:String(lead.expected_value ?? '') } : { ...emptyLead });
@@ -338,9 +334,9 @@ export default function App() {
           </section>)}</div>
         </>}
         {active==='leads'&&<>
-          <section className="page-intro"><div><span className="eyebrow muted">RELACIONAMENTO É TUDO</span><h1>Meus leads<span className="heading-dot">.</span></h1><p>Todos os seus contatos, oportunidades e próximos passos em um lugar.</p></div><button className="btn btn-primary" onClick={()=>openLeadEditor(null)}><Plus size={17}/> Adicionar lead</button></section>
-          <div className="toolbar"><div className="search-box"><Search size={18}/><input aria-label="Pesquisar leads" placeholder="Buscar por nome, empresa, produto..." value={search} onChange={e=>setSearch(e.target.value)}/>{search&&<button aria-label="Limpar pesquisa" onClick={()=>setSearch('')}><X size={15}/></button>}</div><div className="filter-select"><Filter size={17}/><select aria-label="Filtrar por etapa" value={stageFilter} onChange={e=>setStageFilter(e.target.value)}><option value="todos">Todas as etapas</option>{STAGES.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><ChevronDown size={15}/></div><span className="results-count">{displayed.length} {displayed.length===1?'resultado':'resultados'}</span></div>
-          <section className="panel list-panel"><div className="table-wrap"><table className="leads-table"><thead><tr><th>CONTATO</th><th>PRODUTO / SERVIÇO</th><th>ETAPA</th><th>VALOR</th><th>PRÓXIMO RETORNO</th><th></th></tr></thead><tbody>{displayed.map(l=><tr key={l.id} onClick={()=>showContact(l)}><td><div className="table-person"><span className="client-avatar">{initials(l.name)}</span><span><strong>{l.name}</strong><small>{l.company||l.email||'Sem empresa'}</small></span></div></td><td className="muted-cell">{productById(l.product_id)?.name||'Não definido'}</td><td><StagePill stage={l.stage}/></td><td className="value-cell">{brl(l.expected_value)}</td><td><span className={'return-date '+(nextIsLate(l)?'late':'')}><CalendarDays size={14}/>{l.next_follow_up?shortDate(l.next_follow_up):'A definir'}</span></td><td><ChevronRight size={17}/></td></tr>)}</tbody></table></div>{!displayed.length&&<NoContent Icon={Search} title={leads.length?'Nenhum lead encontrado':'Sua lista de leads está vazia'} description={leads.length?'Experimente outra pesquisa ou filtro.':'Cadastre um contato e conecte-o ao produto ou serviço desejado.'} action={!leads.length?'Cadastrar lead':null} onClick={()=>openLeadEditor(null)}/>}</section>
+          <section className="page-intro"><div><span className="eyebrow muted">RELACIONAMENTO É TUDO</span><h1>Meus leads<span className="heading-dot">.</span></h1><p>Pesquise, ordene pelo cabeçalho ou abra o filtro ao lado de cada coluna.</p></div><button className="btn btn-primary" onClick={()=>openLeadEditor(null)}><Plus size={17}/> Adicionar lead</button></section>
+          <LeadsTable leads={leads} products={products} search={search} onSearch={setSearch}
+            stageFilter={stageFilter} onStageFilter={setStageFilter} onSelect={showContact}/>
         </>}
         {active==='calendar'&&<>
           <section className="page-intro"><div><span className="eyebrow muted">RELACIONAMENTOS EM DIA</span><h1>Próximos contatos<span className="heading-dot">.</span></h1><p>Não deixe uma boa conversa esfriar. Planeje seu próximo movimento.</p></div><button className="btn btn-primary" onClick={()=>openLeadEditor(null)}><Plus size={17}/> Novo lead</button></section>
