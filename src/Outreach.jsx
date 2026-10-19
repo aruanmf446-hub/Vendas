@@ -242,10 +242,8 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
   const openVideoWhatsApp = () => {
     if (!validNumber) { setMediaInstruction('Confira o número do WhatsApp no cadastro do lead.'); return; }
     const href = 'https://wa.me/' + number;
-    const opened = window.open(href, '_blank', 'noopener,noreferrer');
-    setMediaInstruction(opened
-      ? 'Conversa aberta. No WhatsApp, clique em + (anexar) → Fotos e vídeos, escolha o MP4 e confirme o envio. Só então marque Vídeo enviado.'
-      : 'Se o navegador bloquear a nova aba, permita pop-ups ou abra o WhatsApp manualmente. Depois anexe o MP4 pelo botão +.');
+    window.open(href, '_blank', 'noopener,noreferrer');
+    setMediaInstruction('O WhatsApp foi solicitado em uma nova aba. Se não abrir, permita pop-ups. Na conversa, clique em + (anexar) → Fotos e vídeos, escolha o MP4 e confirme o envio. Só depois marque Vídeo enviado.');
   };
   const copyText = async () => {
     try {
