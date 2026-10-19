@@ -105,3 +105,9 @@
   .outreach-followup button{width:100%;justify-content:center}
 }
 @media(prefers-reduced-motion:reduce){.outreach-primary,.outreach-confirm-button{transition:none}}
+
+.outreach-lock-note{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:#9d7344;margin:12px 0 0}
+.drawer-outreach-status{display:flex;align-items:center;gap:7px;margin:-4px 29px 13px;color:#48805b;font-size:11px;font-weight:800}
+.product-video-hint{display:block;font-size:10px;color:#8d9bad;line-height:1.6;margin-top:5px}
+.product-video-ready{color:#3f926a;font-size:10px}
+@media(max-width:650px){.drawer-outreach-status{margin-left:20px;margin-right:20px}}
