@@ -106,3 +106,22 @@
 @media(max-width:1050px){.campaigns-grid{grid-template-columns:220px minmax(0,1fr)}.campaigns-bottom-grid{grid-template-columns:1fr}.campaigns-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.campaigns-page{gap:15px}.campaigns-grid{grid-template-columns:1fr}.campaigns-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.campaigns-field-grid{grid-template-columns:1fr}.campaigns-section-title{padding:19px 16px}.campaigns-field-grid{padding:18px 16px 0}.campaigns-label{padding:15px 16px 0}.campaigns-variables{padding:12px 16px}.campaigns-actions{padding:0 16px;flex-wrap:wrap}.campaigns-audience-tools{padding:13px}.campaigns-audience-tools label{min-width:100%;order:-1}.campaigns-lead-row{padding:12px 13px;gap:8px}.campaigns-permission{font-size:9px;padding:5px 6px}.campaigns-lead-name strong{max-width:185px}.campaigns-lead-name small{max-width:185px}.campaigns-mail-preview{margin:0 12px}.campaigns-preview-select{padding:12px}.campaigns-banner{padding:14px}.campaigns-notice{left:12px;right:12px;bottom:12px;max-width:none}}
 @media(max-width:390px){.campaigns-lead-name strong,.campaigns-lead-name small{max-width:130px}.campaigns-lead-buttons{gap:2px}.campaigns-metrics>div{padding:13px}}
+
+/* Primeiro contato: canal individual separado da automacao Resend */
+.campaigns-first-contact{display:grid;grid-template-columns:minmax(0,1fr) minmax(255px,0.72fr);gap:22px;align-items:center;border:1px solid #cad9f2;border-radius:16px;background:linear-gradient(125deg,#192e53,#284c8b);color:#fff;padding:23px 27px;box-shadow:0 9px 25px rgba(22,52,104,.1)}
+.campaigns-first-copy{min-width:0}
+.campaigns-first-eyebrow{font-size:10px;font-weight:800;letter-spacing:1.7px;color:#b8cbfa}
+.campaigns-first-copy h2{font-size:23px;letter-spacing:-.55px;line-height:1.25;margin:12px 0 10px;color:#fff}
+.campaigns-first-copy p{font-size:12px;line-height:1.8;color:#d6e1f9;max-width:600px;margin:0}
+.campaigns-first-actions{display:flex;flex-direction:column;gap:9px;min-width:0}
+.campaigns-first-actions label{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:700;color:#e4edfc}
+.campaigns-first-actions select{appearance:auto;width:100%;min-width:0;padding:11px 13px;background:#fff;border:1px solid #dae5f6;border-radius:8px;font:inherit;font-size:12px;color:#233a5e;overflow:hidden;text-overflow:ellipsis}
+.campaigns-manual-send,.campaigns-manual-confirm{width:100%;min-height:43px;border-radius:9px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer}
+.campaigns-manual-send{background:#fff;color:#243f75;border:1px solid #fff}
+.campaigns-manual-send:hover:not(:disabled){background:#e8efff}
+.campaigns-manual-confirm{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.4)}
+.campaigns-manual-confirm:hover:not(:disabled){background:rgba(255,255,255,.14)}
+.campaigns-manual-send:disabled,.campaigns-manual-confirm:disabled{opacity:.48;cursor:not-allowed}
+.campaigns-first-actions small{font-size:10px;line-height:1.5;color:#cad9f5}
+@media(max-width:860px){.campaigns-first-contact{grid-template-columns:1fr}}
+@media(max-width:760px){.campaigns-first-contact{padding:21px 18px;gap:20px}.campaigns-first-copy h2{font-size:21px}}
