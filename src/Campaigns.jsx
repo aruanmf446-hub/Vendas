@@ -134,6 +134,13 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
     try {await navigator.clipboard.writeText(value);setNotice('Mensagem personalizada copiada. Nenhum e-mail foi disparado.');}
     catch{setNotice('Não foi possível copiar pelo navegador.');}
   };
+  const openMailApp = () => {
+    if (!previewLead?.email || !emailValid(previewLead.email)) {setNotice('Escolha um lead com e-mail válido.');return;}
+    const subject=mapText(form.subject,previewLead,products);
+    const body=mapText(form.body,previewLead,products);
+    window.location.href='mailto:'+encodeURIComponent(previewLead.email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    setNotice('O aplicativo de e-mail foi solicitado. Revise e confirme o envio por lá; o CRM não registra envio automaticamente.');
+  };
   const send = async () => {
     if (sending || pending) return;
     if (!toSend.length) {setNotice('Selecione ao menos um lead autorizado, ainda não incluído neste envio.');return;}
@@ -196,6 +203,7 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
         <div className="campaigns-variables"><span>Variáveis automáticas</span>{['{nome}','{clinica}','{empresa}','{produto}','{origem}'].map(v=><button type="button" key={v} onClick={()=>update('body',form.body+v)}>{v}</button>)}</div>
         <div className="campaigns-actions">
           <button className="btn btn-outline" type="button" onClick={copy}><Clipboard size={16}/> Copiar prévia</button>
+          <button className="btn btn-outline" type="button" onClick={openMailApp}><Mail size={16}/> Abrir no e-mail</button>
           <button className="btn btn-primary" type="button" onClick={save} disabled={pending||sending}><Save size={16}/>{pending?'Salvando...':'Salvar campanha'}</button>
         </div>
       </section>
