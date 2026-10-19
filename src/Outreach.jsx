@@ -128,6 +128,7 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
   const openWhatsApp = withText => {
     if (!validNumber) { setNotice('Confira o WhatsApp deste lead no cadastro antes de abrir a conversa.'); return; }
     if (withText && !text.trim()) { setNotice('Escreva a mensagem antes de abrir o WhatsApp.'); return; }
+    if (withText && current < 1) { setNotice('Envie e confirme o vídeo primeiro. Depois abra a conversa com a mensagem.'); return; }
     const href = 'https://wa.me/' + number + (withText ? '?text=' + encodeURIComponent(text.trim()) : '');
     window.open(href, '_blank', 'noopener,noreferrer');
     setNotice(withText ? 'A conversa foi aberta com a mensagem preenchida. Confirme o envio no WhatsApp e depois marque a etapa.' : 'A conversa foi aberta. Anexe o vídeo diretamente no WhatsApp e confirme o envio antes de marcar a etapa.');
@@ -200,9 +201,10 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
             </div></div>
             <div className="outreach-action-pair">
               <button type="button" className="outreach-secondary" onClick={copyText} disabled={!text.trim()}><Clipboard size={16}/> Copiar mensagem</button>
-              <button type="button" className="outreach-primary" onClick={()=>openWhatsApp(true)} disabled={!validNumber||!text.trim()}><MessageCircle size={18}/> Abrir WhatsApp com mensagem <ArrowRight size={18}/></button>
+              <button type="button" className="outreach-primary" onClick={()=>openWhatsApp(true)} disabled={!validNumber||!text.trim()||current<1}><MessageCircle size={18}/> Abrir WhatsApp com mensagem <ArrowRight size={18}/></button>
             </div>
-            <div className="outreach-confirm"><div><strong>Mensagem realmente enviada?</strong><span>A abertura da conversa não significa que a mensagem foi enviada.</span></div><button type="button" disabled={saving||current>=2} onClick={()=>updateStatus('mensagem_enviada','Mensagem de prospecção enviada ao cliente (confirmação manual):\n' + text)} className={'outreach-confirm-button '+(current>=2?'done':'')}>{current>=2?<><CheckCircle2 size={16}/> Confirmado</>:<><Check size={16}/> Marcar enviada</>}</button></div>
+            {current<1 && <p className="outreach-lock-note"><LockKeyhole size={14}/> Confirme primeiro o envio do vídeo na etapa 01.</p>}
+            <div className="outreach-confirm"><div><strong>Mensagem realmente enviada?</strong><span>A abertura da conversa não significa que a mensagem foi enviada.</span></div><button type="button" disabled={saving||current<1||current>=2} onClick={()=>updateStatus('mensagem_enviada','Mensagem de prospecção enviada ao cliente (confirmação manual):\n' + text)} className={'outreach-confirm-button '+(current>=2?'done':'')}>{current>=2?<><CheckCircle2 size={16}/> Confirmado</>:<><Check size={16}/> Marcar enviada</>}</button></div>
           </section>
 
           <section className="outreach-step outreach-last">
