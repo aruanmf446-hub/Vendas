@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, Check, ChevronRight, Filter, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, Check, ChevronRight, Filter, Mail, Search, X } from 'lucide-react';
 import './leads-table.css';
 
 const EMPTY = '__empty__';
@@ -141,7 +141,7 @@ function ColumnFilter({ column, rect, draft, setDraft, options, onApply, onClear
   );
 }
 
-export default function LeadsTable({ leads, products, search, onSearch, stageFilter, onStageFilter, onSelect }) {
+export default function LeadsTable({ leads, products, search, onSearch, stageFilter, onStageFilter, onSelect, onEmail }) {
   const [applied, setApplied] = useState(freshFilters);
   const [sort, setSort] = useState({ key: '', direction: 'asc' });
   const [opened, setOpened] = useState(null);
@@ -233,7 +233,7 @@ export default function LeadsTable({ leads, products, search, onSearch, stageFil
                 <button type="button" data-filter-trigger className={'lead-filter-trigger'+(isActive(applied[c.key])?' is-filtered':'')} aria-label={'Filtrar '+c.label} aria-haspopup="dialog" aria-expanded={opened?.key===c.key} onClick={e=>openFilter(c.key,e)}><Filter size={15}/>{isActive(applied[c.key])&&<i/>}</button>
               </div>
             </th>)}
-            <th scope="col"><span className="sr-only">Abrir contato</span></th>
+            <th scope="col"><span className="sr-only">Enviar e-mail ou abrir contato</span></th>
           </tr></thead>
           <tbody>{filtered.map(l=><tr key={l.id} onClick={()=>onSelect(l)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')onSelect(l);}} aria-label={'Abrir '+l.name}>
             <td><div className="table-person"><span className="client-avatar">{initials(l.name)}</span><span><strong>{l.name}</strong><small>{l.company || l.email || 'Sem empresa'}</small>{l.last_whatsapp_reply_at && <span className="lead-wa-received">WhatsApp · respondeu</span>}</span></div></td>
@@ -241,7 +241,7 @@ export default function LeadsTable({ leads, products, search, onSearch, stageFil
             <td><span className={'stage-pill '+(STAGES.find(s=>s.id===l.stage)?.color||'gray')}><span className="pill-dot"/>{STAGE_NAMES[l.stage]||'Novo lead'}</span></td>
             <td className="value-cell">{valueCurrency(l.expected_value)}</td>
             <td><span className={'return-date'+(l.next_follow_up && l.next_follow_up < today && !['ganho','perdido'].includes(l.stage)?' late':'')}><CalendarDays size={14}/>{dateCaption(l.next_follow_up)}</span></td>
-            <td><ChevronRight size={17}/></td>
+            <td className="lead-actions-cell"><button type="button" className="lead-send-email" title={l.email_opt_out_at?'Contato descadastrado':l.email?'Preparar e-mail individual':'Lead sem e-mail'} disabled={!l.email||!!l.email_opt_out_at} onClick={e=>{e.stopPropagation();onEmail(l);}} onKeyDown={e=>e.stopPropagation()}><Mail size={15}/> Enviar e-mail</button><ChevronRight size={16}/></td>
           </tr>)}</tbody>
         </table>
       </div>
