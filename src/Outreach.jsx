@@ -31,14 +31,16 @@ const initialDraft = (lead, product) => {
     : 'por meio de ' + source;
   const template = (product?.outreach_template || '').trim();
   if (template) return template.replace(/\{cliente\}/gi, company).replace(/\{produto\}/gi, offer).replace(/\{origem\}/gi, source).slice(0, 2700);
+  const isDentistSite = /dentista|odontol[oó]g|cl[ií]nica odontol/i.test(offer);
   return [
     'Olá, bom dia! Tudo bem?',
-    'Sou da CRM Plus Store e trabalho com desenvolvimento de soluções digitais profissionais.',
-    'Encontrei ' + company + ' ' + lookUp + ' e gostaria de apresentar nosso trabalho com ' + offer + '.',
-    product?.video_url
-      ? 'Compartilhei um vídeo de apresentação para vocês conhecerem a proposta.'
-      : 'Temos uma apresentação que mostra como essa solução pode ajudar a presença digital da sua empresa.',
-    'Podemos conversar rapidamente para eu entender o que faria mais sentido para vocês? Sem compromisso.'
+    'Sou da CRM Plus Store e trabalho com desenvolvimento de sites e soluções digitais profissionais.',
+    'Conheci ' + company + ' ' + lookUp + ' e gostaria de apresentar ' + offer + '.',
+    isDentistSite
+      ? 'Desenvolvemos sites para clínicas odontológicas, personalizados com a identidade visual, fotos, tratamentos e contato direto pelo WhatsApp.'
+      : 'Nossa proposta é personalizada com a identidade da empresa e com o que seus clientes precisam encontrar.',
+    'Acabei de compartilhar um vídeo rápido para mostrar como funciona.',
+    'Posso enviar uma demonstração mais completa para vocês conhecerem, sem compromisso?'
   ].join('\n\n');
 };
 const dateISO = () => {
@@ -55,12 +57,10 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [draftSaved, setDraftSaved] = useState(true);
-  const [isEdited, setIsEdited] = useState(!!lead.outreach_message);
   const number = whatsNumber(lead.phone);
   const validNumber = digitsOnly(lead.phone).length >= 10 && digitsOnly(lead.phone).length <= 13;
   const url = (product?.video_url || '').trim();
   const validVideoUrl = /^https:\/\//i.test(url);
-  const hasVideo = !!localVideo || validVideoUrl;
   const current = STAGES[status] ?? 0;
 
   useEffect(() => {
@@ -194,9 +194,9 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
             <div className="outreach-step-title"><span className="outreach-step-index">02</span><div><div className="outreach-overline">TEXTO PERSONALIZADO</div><h3>Continue a conversa.</h3></div><MessageCircle size={21}/></div>
             <p className="outreach-explain">A mensagem usa os campos do lead. Ajuste o texto, copie ou abra o WhatsApp com tudo preenchido.</p>
             <label htmlFor="outreach-message" className="outreach-text-label">MENSAGEM PARA {lead.company || lead.name}</label>
-            <textarea id="outreach-message" className="outreach-message" rows={8} maxLength={2700} value={text} onChange={e=>{setText(e.target.value);setDraftSaved(false);setIsEdited(true);}}/>
+            <textarea id="outreach-message" className="outreach-message" rows={8} maxLength={2700} value={text} onChange={e=>{setText(e.target.value);setDraftSaved(false);}}/>
             <div className="outreach-message-foot"><span>{text.length} / 2700 caracteres {draftSaved?'· Salvo':'· Alterações não salvas'}</span><div className="outreach-actions-wrap">
-              <button type="button" className="outreach-secondary" onClick={()=>{setText(initialDraft(lead,product));setDraftSaved(false);setIsEdited(false);}}><Sparkles size={16}/> Gerar novamente</button>
+              <button type="button" className="outreach-secondary" onClick={()=>{setText(initialDraft(lead,product));setDraftSaved(false);}}><Sparkles size={16}/> Gerar novamente</button>
               <button type="button" className="outreach-secondary" disabled={saving||!text.trim()||draftSaved} onClick={saveDraft}><Save size={15}/> Salvar texto</button>
             </div></div>
             <div className="outreach-action-pair">
