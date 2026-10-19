@@ -236,7 +236,7 @@ export default function LeadsTable({ leads, products, search, onSearch, stageFil
             <th scope="col"><span className="sr-only">Abrir contato</span></th>
           </tr></thead>
           <tbody>{filtered.map(l=><tr key={l.id} onClick={()=>onSelect(l)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')onSelect(l);}} aria-label={'Abrir '+l.name}>
-            <td><div className="table-person"><span className="client-avatar">{initials(l.name)}</span><span><strong>{l.name}</strong><small>{l.company || l.email || 'Sem empresa'}</small></span></div></td>
+            <td><div className="table-person"><span className="client-avatar">{initials(l.name)}</span><span><strong>{l.name}</strong><small>{l.company || l.email || 'Sem empresa'}</small>{l.last_whatsapp_reply_at && <span className="lead-wa-received">WhatsApp · respondeu</span>}</span></div></td>
             <td className="muted-cell">{getProduct(l,productMap)==='Sem produto'?'Não definido':getProduct(l,productMap)}</td>
             <td><span className={'stage-pill '+(STAGES.find(s=>s.id===l.stage)?.color||'gray')}><span className="pill-dot"/>{STAGE_NAMES[l.stage]||'Novo lead'}</span></td>
             <td className="value-cell">{valueCurrency(l.expected_value)}</td>
