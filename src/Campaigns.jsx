@@ -62,7 +62,7 @@ export default function Campaigns({ leads, products, user, onRefresh, selectedLe
   const shown = useMemo(()=>usable.filter(l=>(l.name+' '+(l.company||'')+' '+l.email).toLowerCase().includes(search.toLowerCase())),[usable,search]);
   const selected = targets.map(id=>leads.find(l=>l.id===id)).filter(Boolean);
   const ready = selected.filter(eligible);
-  const previewLead = leads.find(l=>l.id===previewId) || selected[0] || usable[0];
+  const previewLead = leads.find(l=>l.id===previewId && emailValid(l.email) && !l.email_opt_out_at) || selected.find(l=>emailValid(l.email) && !l.email_opt_out_at) || usable.find(l=>!l.email_opt_out_at) || usable[0];
   const deliveredIds = new Set(deliveries.filter(d=>d.campaign_id===currentId && ['pending','sent'].includes(d.status)).map(d=>d.lead_id));
   const toSend = ready.filter(l=>!deliveredIds.has(l.id));
   const delivered = deliveries.filter(d=>d.campaign_id===currentId);
