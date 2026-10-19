@@ -83,6 +83,9 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
   const validVideoUrl = /^https:\/\//i.test(url);
   const current = STAGES[status] ?? 0;
 
+  // O webhook pode atualizar o status enquanto a abordagem estiver aberta.
+  useEffect(() => { setStatus(lead.outreach_status || 'nao_iniciado'); }, [lead.outreach_status]);
+
   useEffect(() => {
     if (!localVideo) { setPreview(''); return; }
     const objectUrl = URL.createObjectURL(localVideo);
@@ -259,7 +262,7 @@ export default function Outreach({ lead, product, onClose, onRefresh, onNotify, 
             {current>=3 && <button className="outreach-replied" type="button" disabled={saving||status==='respondeu'} onClick={()=>updateStatus('respondeu','Cliente respondeu à abordagem por WhatsApp (confirmação manual).')}><CheckCircle2 size={17}/>{status==='respondeu'?'Resposta registrada':'O cliente respondeu? Registrar resposta'}</button>}
           </section>
           {notice&&<div role="status" className="outreach-notice">{notice}</div>}
-          <div className="outreach-disclaimer"><LockKeyhole size={15}/> Preparação sem API paga. Arquivos locais não são enviados nem armazenados pelo CRM. Você confirma manualmente cada envio no WhatsApp.</div>
+          <div className="outreach-disclaimer"><LockKeyhole size={15}/> O envio continua manual pelo WhatsApp Business. Quando a coexistência oficial da Meta estiver autorizada, o CRM poderá registrar automaticamente as respostas. Arquivos locais não são armazenados pelo CRM.</div>
         </div>
       </div>
     </section>
