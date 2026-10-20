@@ -39,3 +39,9 @@
 .email-compose-confirm{border-color:#b7d9cd;color:#2d7860}
 .email-compose-primary:disabled,.email-compose-secondary:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:620px){.email-compose-overlay{padding:0;align-items:flex-end}.email-compose-dialog{max-height:96vh;border-radius:19px 19px 0 0;width:100%}.email-compose-header{padding:19px}.email-compose-scroll{padding:20px}.email-compose-footer{padding:13px 17px}.email-compose-primary{width:100%;order:-1}.email-compose-secondary{flex:1}.email-compose-header-title h2{font-size:20px}}
+
+/* Link Gmail nativo para evitar dependência do handler mailto no Windows. */
+.email-compose-footer>a.email-compose-primary{text-decoration:none;color:#fff;white-space:nowrap}
+.email-compose-same-tab{font-size:11px;color:#5374b1;text-decoration:underline;text-underline-offset:2px;font-weight:700;padding:8px 4px}
+.email-compose-same-tab:hover{color:#254c9c}
+@media(max-width:620px){.email-compose-footer>a.email-compose-primary{width:100%}.email-compose-same-tab{width:100%;text-align:center;order:4}}
