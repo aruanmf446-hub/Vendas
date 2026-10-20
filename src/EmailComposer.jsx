@@ -29,7 +29,6 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
         ? { subject:saved.subject, body:saved.body } : original;
     } catch { return original; }
   });
-  const [opened, setOpened] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
   const email = (lead.email||'').trim();
@@ -51,7 +50,6 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
 
   const update = (key, value) => {
     setDraft(old => ({...old, [key]:value}));
-    setOpened(false);
     setFeedback('');
   };
   const copy = async () => {
@@ -62,12 +60,11 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
   };
   const openGmail = () => {
     if (!ready) return;
-    setOpened(true);
     setFeedback('Link do Gmail aberto em nova aba. Confira a conta conectada, revise e clique em Enviar no Gmail. Depois registre aqui no CRM.');
   };
   const confirm = async () => {
-    if (!opened || !ready || saving) return;
-    if (!window.confirm('Você realmente enviou o e-mail para '+email+'? Abrir o rascunho não confirma o envio.')) return;
+    if (!ready || saving) return;
+    if (!window.confirm('Confirma que você já enviou o e-mail para '+email+' pelo Hostinger, Gmail ou outro serviço? Isso registra uma confirmação manual, não uma entrega verificada.')) return;
     setSaving(true);
     try {
       const { error } = await supabase.from('crm_activities').insert({
@@ -78,7 +75,7 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
       });
       if (error) throw error;
       await onRefresh(true);
-      onNotify?.('E-mail individual registrado no histórico.');
+      onNotify?.('E-mail marcado como enviado e registrado no histórico do lead.');
       onClose();
     } catch (error) {
       setFeedback('Não foi possível registrar: '+(error.message||'Erro desconhecido.'));
@@ -87,7 +84,6 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
   const reset = () => {
     if (!window.confirm('Restaurar o texto padrão para este lead?')) return;
     setDraft(makeDraft(lead,product));
-    setOpened(false);
     setFeedback('Modelo restaurado.');
   };
 
@@ -109,12 +105,12 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
           <label><span>Mensagem personalizada</span><textarea rows={12} maxLength={6000} value={draft.body} onChange={event=>update('body',event.target.value)} placeholder="Escreva a mensagem para a clínica..."/></label>
           <div className="email-compose-editor-foot"><span>Rascunho salvo neste navegador · {draft.body.length}/6000 caracteres</span><button type="button" onClick={reset}>Restaurar modelo</button></div>
         </div>
-        <div className="email-compose-instruction"><Mail size={17}/><p><strong>Abrir no Gmail</strong> abre uma nova aba do Gmail com destinatário, assunto e texto preenchidos. Escolha sua conta, revise e clique em <strong>Enviar</strong> no Gmail. Nada é disparado automaticamente pelo CRM. Caso uma extensão bloqueie a nova aba, use o link <strong>Abrir na mesma aba</strong> abaixo.</p></div>
+        <div className="email-compose-instruction"><Mail size={17}/><p>Se já enviou pelo <strong>Hostinger</strong> ou outro serviço, clique em <strong>Já enviei · registrar</strong> para sinalizar no CRM. <strong>Abrir no Gmail</strong> abre uma nova aba do Gmail com destinatário, assunto e texto preenchidos. Escolha sua conta, revise e clique em <strong>Enviar</strong> no Gmail. Nada é disparado automaticamente pelo CRM. Caso uma extensão bloqueie a nova aba, use o link <strong>Abrir na mesma aba</strong> abaixo.</p></div>
         {feedback && <div className="email-compose-feedback" role="status">{feedback}</div>}
       </div>
       <footer className="email-compose-footer">
         <button className="email-compose-secondary" type="button" onClick={copy} disabled={!validEmail(email)||!complete}><Clipboard size={16}/> Copiar texto</button>
-        {opened && <button className="email-compose-secondary email-compose-confirm" type="button" onClick={confirm} disabled={saving||!ready}><Check size={16}/>{saving?'Registrando...':'Já enviei · registrar'}</button>}
+        <button className="email-compose-secondary email-compose-confirm" type="button" onClick={confirm} disabled={saving||!ready} title="Registre o e-mail que você já enviou pelo Hostinger, Gmail ou outro serviço"><Check size={16}/>{saving?'Registrando...':'Já enviei · registrar'}</button>
         {ready && !saving
           ? <a className="email-compose-primary" href={gmailUrl} target="_blank" rel="noopener noreferrer" onClick={openGmail}><Mail size={17}/> Abrir no Gmail <ExternalLink size={15}/></a>
           : <button className="email-compose-primary" type="button" disabled><Mail size={17}/> Abrir no Gmail <ExternalLink size={15}/></button>}
