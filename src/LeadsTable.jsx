@@ -141,7 +141,7 @@ function ColumnFilter({ column, rect, draft, setDraft, options, onApply, onClear
   );
 }
 
-export default function LeadsTable({ leads, products, search, onSearch, stageFilter, onStageFilter, onSelect, onEmail }) {
+export default function LeadsTable({ leads, products, search, onSearch, stageFilter, onStageFilter, onSelect, onEmail, emailSentIds }) {
   const [applied, setApplied] = useState(freshFilters);
   const [sort, setSort] = useState({ key: '', direction: 'asc' });
   const [opened, setOpened] = useState(null);
@@ -236,7 +236,7 @@ export default function LeadsTable({ leads, products, search, onSearch, stageFil
             <th scope="col"><span className="sr-only">Enviar e-mail ou abrir contato</span></th>
           </tr></thead>
           <tbody>{filtered.map(l=><tr key={l.id} onClick={()=>onSelect(l)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')onSelect(l);}} aria-label={'Abrir '+l.name}>
-            <td><div className="table-person"><span className="client-avatar">{initials(l.name)}</span><span><strong>{l.name}</strong><small>{l.company || l.email || 'Sem empresa'}</small>{l.last_whatsapp_reply_at && <span className="lead-wa-received">WhatsApp · respondeu</span>}</span></div></td>
+            <td><div className="table-person"><span className="client-avatar">{initials(l.name)}</span><span><strong>{l.name}</strong><small>{l.company || l.email || 'Sem empresa'}</small>{l.last_whatsapp_reply_at && <span className="lead-wa-received">WhatsApp · respondeu</span>}{emailSentIds?.has(l.id) && <span className="lead-email-sent"><Mail size={11}/> E-mail enviado</span>}</span></div></td>
             <td className="muted-cell">{getProduct(l,productMap)==='Sem produto'?'Não definido':getProduct(l,productMap)}</td>
             <td><span className={'stage-pill '+(STAGES.find(s=>s.id===l.stage)?.color||'gray')}><span className="pill-dot"/>{STAGE_NAMES[l.stage]||'Novo lead'}</span></td>
             <td className="value-cell">{valueCurrency(l.expected_value)}</td>
