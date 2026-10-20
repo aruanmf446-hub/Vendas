@@ -37,6 +37,8 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
   const usable = validEmail(email) && !blocked;
   const complete = draft.subject.trim().length>=2 && draft.body.trim().length>=10;
   const ready = usable && complete;
+  // Link HTTPS direto para o composer do Gmail: nao depende de cliente mailto instalado.
+  const gmailUrl = ready ? 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(email)+'&su='+encodeURIComponent(draft.subject.trim())+'&body='+encodeURIComponent(draft.body.trim()) : '';
 
   useEffect(() => {
     const keydown = event => { if (event.key === 'Escape') onClose(); };
@@ -58,11 +60,10 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
       setFeedback('Mensagem copiada. Nenhum e-mail foi enviado pelo CRM.');
     } catch { setFeedback('A cópia não está disponível neste navegador.'); }
   };
-  const openEmail = () => {
+  const openGmail = () => {
     if (!ready) return;
     setOpened(true);
-    setFeedback('Rascunho preparado. Confirme o envio no aplicativo de e-mail e depois registre no CRM.');
-    window.location.href = 'mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(draft.subject.trim())+'&body='+encodeURIComponent(draft.body.trim());
+    setFeedback('Link do Gmail aberto em nova aba. Confira a conta conectada, revise e clique em Enviar no Gmail. Depois registre aqui no CRM.');
   };
   const confirm = async () => {
     if (!opened || !ready || saving) return;
@@ -108,13 +109,16 @@ export default function EmailComposer({ lead, product, userId, onClose, onRefres
           <label><span>Mensagem personalizada</span><textarea rows={12} maxLength={6000} value={draft.body} onChange={event=>update('body',event.target.value)} placeholder="Escreva a mensagem para a clínica..."/></label>
           <div className="email-compose-editor-foot"><span>Rascunho salvo neste navegador · {draft.body.length}/6000 caracteres</span><button type="button" onClick={reset}>Restaurar modelo</button></div>
         </div>
-        <div className="email-compose-instruction"><Mail size={17}/><p>Ao clicar em <strong>Abrir aplicativo de e-mail</strong>, a mensagem será preenchida para você revisar e enviar com sua própria conta. Este botão não usa Resend nem dispara mensagens automaticamente.</p></div>
+        <div className="email-compose-instruction"><Mail size={17}/><p><strong>Abrir no Gmail</strong> abre uma nova aba do Gmail com destinatário, assunto e texto preenchidos. Escolha sua conta, revise e clique em <strong>Enviar</strong> no Gmail. Nada é disparado automaticamente pelo CRM. Caso uma extensão bloqueie a nova aba, use o link <strong>Abrir na mesma aba</strong> abaixo.</p></div>
         {feedback && <div className="email-compose-feedback" role="status">{feedback}</div>}
       </div>
       <footer className="email-compose-footer">
         <button className="email-compose-secondary" type="button" onClick={copy} disabled={!validEmail(email)||!complete}><Clipboard size={16}/> Copiar texto</button>
         {opened && <button className="email-compose-secondary email-compose-confirm" type="button" onClick={confirm} disabled={saving||!ready}><Check size={16}/>{saving?'Registrando...':'Já enviei · registrar'}</button>}
-        <button className="email-compose-primary" type="button" onClick={openEmail} disabled={!ready||saving}><Mail size={17}/> Abrir aplicativo de e-mail <ExternalLink size={15}/></button>
+        {ready && !saving
+          ? <a className="email-compose-primary" href={gmailUrl} target="_blank" rel="noopener noreferrer" onClick={openGmail}><Mail size={17}/> Abrir no Gmail <ExternalLink size={15}/></a>
+          : <button className="email-compose-primary" type="button" disabled><Mail size={17}/> Abrir no Gmail <ExternalLink size={15}/></button>}
+        {ready && <a className="email-compose-same-tab" href={gmailUrl} onClick={openGmail} title="Abrir o Gmail na aba atual se a nova aba nao abrir">Abrir na mesma aba</a>}
       </footer>
     </section>
   </div>;
