@@ -18,7 +18,7 @@ export default function AdminCentral({user}){
  const checked=r=>{if(r.error)throw r.error};
  async function audit(kind,description){checked(await supabase.from('adm_events').insert({owner_id:user.id,project_id:project,kind,description}))}
  function setStatus(status){action(async()=>{
-  checked(await supabase.from('adm_projects').upsert({...selected,owner_id:user.id,status,repo_url:selected.repo,production_url:selected.url,updated_at:new Date().toISOString()},{onConflict:'owner_id,id'}));
+  checked(await supabase.from('adm_projects').upsert({id:selected.id,name:selected.name,owner_id:user.id,status,repo_url:selected.repo,production_url:selected.url,updated_at:new Date().toISOString()},{onConflict:'owner_id,id'}));
   await audit('status','Estado administrativo: '+status);
   setNote('Estado salvo. Não bloqueia o site externo até que a API de controle seja conectada.');
  })}
