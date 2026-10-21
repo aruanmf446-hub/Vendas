@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const ownerId = process.env.ADM_OWNER_USER_ID;
+  const ownerId = process.env.ADM_RECORD_OWNER_USER_ID;
   if (!url || !key || !ownerId) return res.status(503).json({ error: 'Integração não configurada' });
   try {
     const chunks = [];
