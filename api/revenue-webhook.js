@@ -13,8 +13,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const ownerId = process.env.ADM_RECORD_OWNER_USER_ID;
-  if (!url || !key || !ownerId) return res.status(503).json({ error: 'Integração não configurada' });
+  if (!url || !key) return res.status(503).json({ error: 'Integração não configurada' });
   try {
     const chunks = [];
     let length = 0;
@@ -45,7 +44,6 @@ export default async function handler(req, res) {
     }
     const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
     const { error } = await db.from('adm_revenue').insert({
-      owner_id: ownerId,
       project_id: project,
       amount: payload.amount_cents / 100,
       description: payload.description.trim(),
