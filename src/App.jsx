@@ -36,7 +36,7 @@ const today = () => {
   const date = new Date();
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
-const brl = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(v) || 0);
+const brl = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(v) || 0);
 const shortDate = value => value ? new Date(value + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') : 'Sem data';
 const longDate = value => value ? new Date(value).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '') : '';
 const initials = name => (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
@@ -159,6 +159,7 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [leads, setLeads] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [receivedRevenue, setReceivedRevenue] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
@@ -193,7 +194,7 @@ export default function App() {
   }, [user?.id, user?.email]);
 
   useEffect(() => {
-    if (!permitted(user)) { setProducts([]); setLeads([]); setActivities([]); return; }
+    if (!permitted(user)) { setProducts([]); setLeads([]); setActivities([]); setReceivedRevenue([]); return; }
     refresh();
   }, [user?.id]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4200); return () => clearTimeout(timer); }, [toast]);
@@ -212,13 +213,14 @@ export default function App() {
   async function refresh(quiet = false) {
     if (!supabase) return;
     if (!quiet) setLoading(true);
-    const [pr, ld, ac] = await Promise.all([
+    const [pr, ld, ac, rv] = await Promise.all([
       supabase.from('crm_products').select('*').order('name'),
       supabase.from('crm_leads').select('*').order('updated_at', { ascending: false }),
-      supabase.from('crm_activities').select('*').order('created_at', { ascending: false })
+      supabase.from('crm_activities').select('*').order('created_at', { ascending: false }),
+      supabase.from('adm_revenue').select('amount,project_id,created_at')
     ]);
-    if (pr.error || ld.error || ac.error) { if (!quiet) setToast('Erro ao carregar: ' + (pr.error || ld.error || ac.error).message); }
-    else { setProducts(pr.data || []); setLeads(ld.data || []); setActivities(ac.data || []); }
+    if (pr.error || ld.error || ac.error || rv.error) { if (!quiet) setToast('Erro ao carregar: ' + (pr.error || ld.error || ac.error || rv.error).message); }
+    else { setProducts(pr.data || []); setLeads(ld.data || []); setActivities(ac.data || []); setReceivedRevenue(rv.data || []); }
     if (!quiet) setLoading(false);
   }
   const productById = id => products.find(p=>p.id===id);
@@ -231,6 +233,7 @@ export default function App() {
   const overdue = openLeads.filter(nextIsLate);
   const pipelineValue = openLeads.reduce((s,l)=>s+Number(l.expected_value||0),0);
   const wonValue = won.reduce((s,l)=>s+Number(l.expected_value||0),0);
+  const realRevenue = receivedRevenue.reduce((total,entry)=>total+Number(entry.amount||0),0);
   const upcoming = useMemo(()=>openLeads.filter(l=>l.next_follow_up).sort((a,b)=>a.next_follow_up.localeCompare(b.next_follow_up)),[leads]);
   const openLeadEditor = lead => {
     setEditing(lead || null);
@@ -333,7 +336,7 @@ export default function App() {
           <div className="stats-grid">
             <div className="stat-card"><div className="stat-top"><span>Leads no funil</span><span className="stat-icon blue-soft"><UsersRound size={18}/></span></div><strong>{openLeads.length}</strong><p><span className="mini-dot blue-bg"/> oportunidades em aberto</p></div>
             <div className="stat-card"><div className="stat-top"><span>Valor em negociação</span><span className="stat-icon purple-soft"><TrendingUp size={18}/></span></div><strong className="currency">{brl(pipelineValue)}</strong><p>Potencial do funil ativo</p></div>
-            <div className="stat-card"><div className="stat-top"><span>Vendas fechadas</span><span className="stat-icon green-soft"><CheckCheck size={18}/></span></div><strong className="currency">{brl(wonValue)}</strong><p>{won.length} {won.length===1?'negócio concluído':'negócios concluídos'}</p></div>
+            <div className="stat-card"><div className="stat-top"><span>Receita recebida</span><span className="stat-icon green-soft"><CheckCheck size={18}/></span></div><strong className="currency">{brl(realRevenue)}</strong><p>Recebimentos cadastrados de todos os produtos</p></div>
             <div className="stat-card"><div className="stat-top"><span>Retornos atrasados</span><span className="stat-icon coral-soft"><Clock3 size={18}/></span></div><strong>{overdue.length}</strong><p className={overdue.length?'attention':''}>{overdue.length?'Precisam de atenção':'Tudo em dia por aqui'}</p></div>
           </div>
           <div className="overview-grid">
