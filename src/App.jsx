@@ -11,6 +11,7 @@ import Outreach from './Outreach.jsx';
 import LeadsTable from './LeadsTable.jsx';
 import EmailComposer from './EmailComposer.jsx';
 import AdminCentral from './AdminCentral.jsx';
+import FinanceCentral from './FinanceCentral.jsx';
 import './outreach.css';
 
 const STAGES = [
@@ -28,6 +29,7 @@ const menu = [
   { id: 'leads', label: 'Meus leads', Icon: UsersRound },
   { id: 'calendar', label: 'Acompanhamentos', Icon: CalendarDays },
   { id: 'products', label: 'Produtos e serviços', Icon: Package },
+  { id: 'finance', label: 'Receitas e custos', Icon: DollarSign },
   { id: 'admin', label: 'Administração', Icon: BriefcaseBusiness }
 ];
 const today = () => {
@@ -153,6 +155,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('signin');
   const [active, setActive] = useState('overview');
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [leads, setLeads] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -313,7 +316,7 @@ export default function App() {
   return <div className="shell">
     <aside className={'sidebar' +(mobileMenu?' is-open':'')}>
       <div className="side-top"><Brand dark/><button className="icon-btn mobile-close" onClick={()=>setMobileMenu(false)} aria-label="Fechar menu"><X size={19}/></button></div>
-      <div className="side-section"><span className="side-caption">WORKSPACE</span><div className="workspace-mark"><span className="workspace-icon">C</span><span><strong>Comercial</strong><small>Meu espaço de vendas</small></span><ChevronDown size={16}/></div></div>
+      <div className="side-section"><span className="side-caption">WORKSPACE</span><button type="button" className="workspace-mark" style={{width:"100%",color:"white",textAlign:"left",cursor:"pointer"}} onClick={()=>setWorkspaceOpen(v=>!v)} aria-expanded={workspaceOpen}><span className="workspace-icon">C</span><span><strong>{active==="admin"?"Administração":"Comercial"}</strong><small>Trocar ambiente</small></span><ChevronDown size={16}/></button>{workspaceOpen&&<div style={{display:"grid",gap:5,marginTop:8}}><button className="side-link" onClick={()=>{navTo("overview");setWorkspaceOpen(false)}}>Comercial</button><button className="side-link" onClick={()=>{navTo("admin");setWorkspaceOpen(false)}}>Administração</button></div>}</div>
       <div className="side-section nav-section"><span className="side-caption">MENU PRINCIPAL</span><nav className="side-nav">{menu.map(({id,label,Icon})=><button key={id} onClick={()=>navTo(id)} className={'side-link '+(active===id?'active':'')}><Icon size={19} strokeWidth={1.85}/><span>{label}</span>{id==='calendar'&&overdue.length>0&&<small className="side-alert">{overdue.length}</small>}</button>)}</nav></div>
       <div className="side-promo"><div className="promo-spark"><Sparkles size={20}/></div><strong>Venda com clareza.</strong><p>Um bom acompanhamento transforma oportunidades em negócios.</p><div className="promo-decoration"/></div>
       <div className="side-profile"><span className="profile-avatar">{initials(displayName)}</span><div className="profile-info"><strong title={user.email}>{displayName}</strong><small title={user.email}>{user.email}</small></div><button className="icon-btn" onClick={signOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={18}/></button></div>
@@ -323,6 +326,7 @@ export default function App() {
       <header className="topbar"><div className="topbar-left"><button className="icon-btn mobile-menu" onClick={()=>setMobileMenu(true)} aria-label="Abrir menu"><Menu size={22}/></button><span className="crumb">Workspace</span><ChevronRight size={15} className="crumb-icon"/><strong>{screenName}</strong></div><div className="topbar-right"><span className="today-label"><CalendarDays size={15}/>{new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</span><button className="top-avatar" title={user.email}>{initials(displayName)}</button></div></header>
       <main className="main-content">
         {active==='admin' && <AdminCentral user={user} />}
+        {active==='finance' && <FinanceCentral user={user} />}
         {active==='overview'&&<>
           <section className="welcome"><div className="welcome-main"><div className="eyebrow"><span className="eyebrow-dot"/>SEU PAINEL COMERCIAL</div><h1>Vendas melhores começam com <em>boas conexões.</em></h1><p>Tenha uma visão clara de cada oportunidade e saiba exatamente qual é o próximo passo.</p><button className="btn btn-dark" onClick={()=>openLeadEditor(null)}>Adicionar novo lead <ArrowUpRight size={17}/></button></div><div className="welcome-art" aria-hidden="true"><span className="orbit orbit-1"/><span className="orbit orbit-2"/><span className="orbit orbit-3"/><div className="art-node art-node-a"><Target size={19}/></div><div className="art-node art-node-b"><CheckCheck size={18}/></div><div className="art-node art-node-c"><Handshake size={20}/></div><div className="art-center"><TrendingUp size={34}/></div></div></section>
           <div className="section-heading stat-heading"><div><span className="eyebrow muted">NÚMEROS QUE IMPORTAM</span><h2>Panorama de vendas</h2></div><span className="section-sub">Atualizado com seus dados</span></div>
