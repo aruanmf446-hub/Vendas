@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
+export const config = { api: { bodyParser: false } };
+
 const signatures = {
   'ponto-do-pedido': 'ADM_PDP_WEBHOOK_SECRET',
   'quem-sou-eu': 'ADM_QSE_WEBHOOK_SECRET',
