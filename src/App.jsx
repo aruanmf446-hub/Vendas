@@ -10,6 +10,7 @@ import { configured, supabase } from './supabase';
 import Outreach from './Outreach.jsx';
 import LeadsTable from './LeadsTable.jsx';
 import EmailComposer from './EmailComposer.jsx';
+import AdminCentral from './AdminCentral.jsx';
 import './outreach.css';
 
 const STAGES = [
@@ -26,7 +27,8 @@ const menu = [
   { id: 'funnel', label: 'Funil de vendas', Icon: Target },
   { id: 'leads', label: 'Meus leads', Icon: UsersRound },
   { id: 'calendar', label: 'Acompanhamentos', Icon: CalendarDays },
-  { id: 'products', label: 'Produtos e serviços', Icon: Package }
+  { id: 'products', label: 'Produtos e serviços', Icon: Package },
+  { id: 'admin', label: 'Administração', Icon: BriefcaseBusiness }
 ];
 const today = () => {
   const date = new Date();
@@ -320,6 +322,7 @@ export default function App() {
     <div className="main-area">
       <header className="topbar"><div className="topbar-left"><button className="icon-btn mobile-menu" onClick={()=>setMobileMenu(true)} aria-label="Abrir menu"><Menu size={22}/></button><span className="crumb">Workspace</span><ChevronRight size={15} className="crumb-icon"/><strong>{screenName}</strong></div><div className="topbar-right"><span className="today-label"><CalendarDays size={15}/>{new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</span><button className="top-avatar" title={user.email}>{initials(displayName)}</button></div></header>
       <main className="main-content">
+        {active==='admin' && <AdminCentral user={user} />}
         {active==='overview'&&<>
           <section className="welcome"><div className="welcome-main"><div className="eyebrow"><span className="eyebrow-dot"/>SEU PAINEL COMERCIAL</div><h1>Vendas melhores começam com <em>boas conexões.</em></h1><p>Tenha uma visão clara de cada oportunidade e saiba exatamente qual é o próximo passo.</p><button className="btn btn-dark" onClick={()=>openLeadEditor(null)}>Adicionar novo lead <ArrowUpRight size={17}/></button></div><div className="welcome-art" aria-hidden="true"><span className="orbit orbit-1"/><span className="orbit orbit-2"/><span className="orbit orbit-3"/><div className="art-node art-node-a"><Target size={19}/></div><div className="art-node art-node-b"><CheckCheck size={18}/></div><div className="art-node art-node-c"><Handshake size={20}/></div><div className="art-center"><TrendingUp size={34}/></div></div></section>
           <div className="section-heading stat-heading"><div><span className="eyebrow muted">NÚMEROS QUE IMPORTAM</span><h2>Panorama de vendas</h2></div><span className="section-sub">Atualizado com seus dados</span></div>
